@@ -1,0 +1,515 @@
+order-radius:8px; padding:8px}
+
+
+  input[type="date"]{background:#0b1220; border:1px solid var(--line); color:#fff; border-radius:8px; padding:6px} 
+  
+
+
+/* 브라우저별 내장 달력 선택 아이콘을 흰색/밝은색 계열로 변경 */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1); /* 검은색 아이콘 색상을 반전시켜 흰색으로 변경 */
+  cursor: pointer;
+}
+
+  /* 버튼 스타일 */
+  .btn {
+    width: 100%; padding: 10px; background: var(--accent); color: #fff; border: none; border-radius: 8px; 
+    font-weight: 600; cursor: pointer; margin-top: 8px; transition: background 0.2s;
+  }
+  .btn:hover { background: #3b82f6; }
+  .btn-secondary { background: #334155; }
+  .btn-secondary:hover { background: #475569; }
+
+  /* 테이블 & 인터랙션 */
+  .table{width:100%; border-collapse:collapse}
+  .table th,.table td{border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:10px 8px; font-size:13.5px; text-align:left; vertical-align:middle}
+  .table th{background:#0d162a; position:sticky; top:0; z-index:1}
+  
+  .table tbody tr { cursor: pointer; transition: background 0.15s; }
+  .table tbody tr:hover { background: #1e293b; }
+  .table tbody tr.selected { background: #1e3a8a !important; }
+
+  .split{display:grid; grid-template-columns: 1fr 360px; gap:12px}
+  @media (max-width:1200px){ .split{grid-template-columns:1fr} }
+  .detail{height:100%; display:flex; flex-direction:column}
+  .detail .script{flex:1; background:#0b1220; border:1px solid var(--line); border-radius:8px; padding:10px; overflow:auto; white-space:pre-wrap}
+  .muted{color:var(--muted)}
+  .hl{color:#e2e8f0}
+  .row{display:flex; gap:8px}
+  .row > *{flex:1}
+  .note{font-size:12px; color:var(--muted)}
+  .statusbar{display:flex; gap:10px; align-items:center; color:#fff; font-size:13px}
+  .tag{display:inline-block; padding:2px 6px; border:1px solid var(--line); border-radius:6px; font-size:12px; color:#cbd5e1}
+
+  /* 로딩 표시기 */
+  .spinner {
+    display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%; border-top-color: #fff; animation: spin 0.8s linear infinite; margin-right: 6px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>신규 인허가 영업 자동화 – 메인</h1>
+  <div class="sub" style="color:var(--muted); font-size:13px; margin-top:4px;">공공데이터포털 실시간 API 데이터 연동 (인허가일 날짜 포맷 반영)</div>
+</header>
+
+<div class="container">
+  <aside class="side">
+    <div class="grp">
+      <label>지역</label>
+      <div class="chkrow" id="regionFilter">
+        <label><input type="checkbox" value="부산광역시" checked> 부산</label>
+        <label><input type="checkbox" value="울산광역시" checked> 울산</label>
+        <label><input type="checkbox" value="경상남도" checked> 경남</label>
+      </div>
+      <label style="margin-top:8px">구/동 (부분 입력 가능)</label>
+      <input type="text" id="districtBox" placeholder="예: 해운대구, 수영구, 남구, 중구, ○○동 등">
+      <div class="note">주소에서 추출한 구/동 명칭으로 필터링합니다.</div>
+    </div>
+
+    <div class="grp">
+      <label>업종</label>
+      <div class="chkrow" id="industryFilter">
+        <label><input type="checkbox" value="일반음식점" checked> 일반음식점</label>
+        <label><input type="checkbox" value="휴게음식점" checked> 휴게음식점</label>
+        <label><input type="checkbox" value="이용업" checked> 이용업</label>
+        <label><input type="checkbox" value="미용업" checked> 미용업</label>
+      </div>
+    </div>
+
+    <div class="grp">
+      <label>인허가일</label>
+      <div class="row">
+        <input type="date" id="fromDate">
+        <input type="date" id="toDate">
+      </div>
+      <div class="note">기본: 최근 7일 (검색 필수 조건)</div>
+    </div>
+
+    <button class="btn" id="apiFetchBtn">⚡ API 데이터 호출</button>
+    <button class="btn btn-secondary" id="resetFilterBtn">초기화</button>
+    <hr style="border:none;border-top:1px solid var(--line); margin:12px 0">
+    <div class="note">
+      사용 팁<br>
+      - <strong>[API 데이터 호출]</strong> 버튼을 클릭하면 실시간 데이터가 자동으로 통합 연동됩니다.
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="card">
+      <div class="hd">실시간 검색 및 필터</div>
+      <div class="bd" style="border-bottom:1px solid var(--line);">
+        <input type="text" id="searchBox" placeholder="호출된 데이터에서 상호/주소 즉시 검색 (입력 즉시 반영)" />
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="card" style="min-height:480px;">
+        <div class="bd" style="padding:0;">
+          <div style="max-height:65vh; overflow:auto;">
+            <table class="table" id="leadTable">
+              <thead>
+                <tr>
+                  <th style="width:60px;">번호</th>
+                  <th style="width:280px;">상호</th>
+                  <th style="width:120px;">업종</th>
+                  <th style="width:120px;">지역</th>
+                  <th style="width:100px;">구/동</th>
+                  <th style="width:120px;">인허가일</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">
+                    좌측 [API 데이터 호출] 버튼을 클릭해 실시간 공공데이터를 로드해 주세요.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="bd">
+            <div class="statusbar">
+              <span id="countInfo">총 0건</span>
+              <span class="tag" id="quotaInfo" style="background:#1e293b; color:var(--warn)">API IDLE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card detail">
+        <div class="hd">상세/스크립트</div>
+        <div class="bd">
+          <div id="detailInfo" class="muted">좌측에서 항목을 선택하세요.</div>
+          <div id="detailPane" style="display:none;">
+            <div style="margin-bottom:8px">
+              <div><span class="hl" id="dName">-</span> <span class="muted">|</span> <span id="dIndustry" class="muted">-</span></div>
+              <div class="muted" id="dAddr">-</div>
+              <div class="muted" style="margin-top: 4px;">인허가일: <span id="dPermit" style="color:var(--accent); font-weight:600;">-</span></div>
+            </div>
+            <label>스크립트(미리보기)</label>
+            <div class="script" id="dScript"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+
+// ==========================================
+// 🔴 [필수] 여기에 공공데이터포털 인증키를 입력하세요.
+// ==========================================
+const MY_REAL_API_KEY = "b96df6c14f16d2fcdfcd4887c5ebcb2b6fd8ec35210553e0f0a9598b897a646f";
+
+// ==== 상태 ====
+let leads = []; // 수집된 전체 API 원본 데이터
+let filtered = []; // 검색/필터 적용된 데이터
+let selectedId = null;
+
+// ==== 유틸 ====
+function qs(s){return document.querySelector(s)}
+function qsa(s){return Array.from(document.querySelectorAll(s))}
+
+// 도로명주소와 지번주소 기반 광역시도 식별
+function extractRegion(addr) {
+  if (!addr) return "미분류";
+  if (addr.includes("부산")) return "부산광역시";
+  if (addr.includes("울산")) return "울산광역시";
+  if (addr.includes("경남") || addr.includes("경상남도")) return "경상남도";
+  return "기타지역";
+}
+
+// 주소 텍스트에서 '구' 또는 '동'을 분리 추출하는 파서
+function extractDistrict(addr){
+  if(!addr) return "-";
+  const tokens = addr.split(/\s+/);
+  for(const t of tokens){
+    if(/[가-힣]+구$/.test(t)) return t;
+  }
+  for(const t of tokens){
+    if(/[가-힣]+동$/.test(t)) return t;
+  }
+  return "-";
+}
+
+// 날짜 데이터 정규 포맷 가공기
+function parsePermitDate(item) {
+  let rawDate = item.DAT_UPDT_PNT || item.LCPMT_YMD || "";
+  rawDate = rawDate.trim();
+
+  if (!rawDate) return "날짜미상";
+
+  if (rawDate.includes("-") && rawDate.length >= 10) {
+    return rawDate.slice(0, 10);
+  }
+
+  if (rawDate.length === 8 && !isNaN(rawDate)) {
+    return `${rawDate.slice(0,4)}-${rawDate.slice(4,6)}-${rawDate.slice(6,8)}`;
+  }
+
+  return rawDate;
+}
+
+// ==== 공공데이터포털 실시간 수집 및 CORS 우회 엔진 ====
+async function fetchPublicData() {
+  let serviceKey = MY_REAL_API_KEY.trim();
+  if(!serviceKey || serviceKey.startsWith("여기에_")) {
+    alert("코드 상단의 MY_REAL_API_KEY 변수에 실제 공공데이터포털 인증키를 기입해 주세요!");
+    return;
+  }
+
+  try {
+    serviceKey = decodeURIComponent(serviceKey);
+  } catch(e) {
+    console.warn("인증키 디코딩 예외 발생 (기본값 사용):", e);
+  }
+
+  const selectedInds = qsa("#industryFilter input:checked").map(x => x.value);
+  if (selectedInds.length === 0) {
+    alert("조회할 업종을 하나 이상 선택해 주세요.");
+    return;
+  }
+
+  const rawFrom = qs("#fromDate").value;
+  const rawTo = qs("#toDate").value;
+  if (!rawFrom || !rawTo) {
+    alert("인허가일 검색 기간이 지정되지 않았습니다.");
+    return;
+  }
+  const fromDateQuery = rawFrom.replace(/-/g, "");
+  const toDateQuery = rawTo.replace(/-/g, "");
+
+  const quotaTag = qs("#quotaInfo");
+  quotaTag.style.background = "#1e3a8a";
+  quotaTag.style.color = "#60a5fa";
+  quotaTag.innerHTML = `<span class="spinner"></span> API 수집 중...`;
+
+  const tb = qs("#leadTable tbody");
+  tb.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px;"><span class="spinner"></span> 각 업종별 공공데이터 API를 실시간 취합하고 있습니다...</td></tr>`;
+
+  // 업종별 API Endpoint 지정 매핑
+  const endpoints = {
+    '휴게음식점': 'https://apis.data.go.kr/1741000/rest_cafes/Info',
+    '일반음식점': 'https://apis.data.go.kr/1741000/general_restaurants/info',
+    '이용업': 'https://apis.data.go.kr/1741000/barber_shops/info',
+    '미용업': 'https://apis.data.go.kr/1741000/beauty_salons/info'
+  };
+
+  let allFetchedData = [];
+  let connectionSuccess = false; 
+  let lastErrorMessage = "";
+
+  for (const indName of selectedInds) {
+    const baseUrl = endpoints[indName];
+    if (!baseUrl) continue;
+
+    const queryParams = `?serviceKey=${encodeURIComponent(serviceKey)}&pageNo=1&numOfRows=300&type=json&authDateStart=${fromDateQuery}&authDateEnd=${toDateQuery}`;
+    const directUrl = baseUrl + queryParams;
+    
+    // 💡 더 안정적인 CORS 우회 프록시 'codetabs' 및 'allorigins' 백업 시스템 교차 적용
+    const proxyUrlCodetabs = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(directUrl)}`;
+    const proxyUrlAllorigins = `https://api.allorigins.win/get?url=${encodeURIComponent(directUrl)}`;
+
+    try {
+      let response;
+      let resJson = null;
+
+      console.log(`${indName} 수집 트래픽 요청...`);
+      
+      try {
+        // 1차 직접 호출 시도
+        response = await fetch(directUrl);
+        if (response.ok) {
+          resJson = await response.json();
+        } else {
+          throw new Error(`Direct failed (Status: ${response.status})`);
+        }
+      } catch (e) {
+        console.warn(`${indName} 직접 호출 차단됨. CORS 우회 프록시(Codetabs) 작동 시도...`);
+        
+        try {
+          // 2차: Codetabs 프록시 통신 시도 (JSON 그대로 변환 없이 통과시켜 깔끔함)
+          response = await fetch(proxyUrlCodetabs);
+          if (!response.ok) throw new Error("Codetabs Proxy failed");
+          const resText = await response.text();
+          
+          // 받아온 텍스트가 "API not found" 혹은 에러 문구인지 가로채기 검증
+          if (resText.includes("API not found") || resText.includes("SERVICE ERROR") || !resText.trim().startsWith("{")) {
+            throw new Error("프록시 서버 응답 규격이 올바른 JSON 형식이 아닙니다.");
+          }
+          resJson = JSON.parse(resText);
+        } catch (errCodetabs) {
+          console.warn(`${indName} 2차 프록시 실패. 3차 백업 프록시(Allorigins) 작동 시도...`);
+          
+          // 3차: Allorigins 프록시 최종 보완 통신 시도
+          response = await fetch(proxyUrlAllorigins);
+          if (!response.ok) throw new Error("Allorigins Proxy network error");
+          
+          const proxyContainer = await response.json();
+          if (!proxyContainer.contents) throw new Error("Allorigins 빈 결과 반환");
+          
+          const rawContents = proxyContainer.contents;
+          if (rawContents.includes("API not found") || rawContents.includes("SERVICE_KEY_IS_NOT_REGISTERED_ERROR")) {
+            throw new Error("공공데이터 등록 대기 또는 잘못된 서비스키 오류 발생");
+          }
+          resJson = JSON.parse(rawContents);
+        }
+      }
+
+      if (!resJson) {
+        throw new Error("API 응답 해석 데이터 없음");
+      }
+
+      // 공공데이터 에러 응답 분기
+      if (resJson.RESULT && resJson.RESULT.resultCode) {
+        if (resJson.RESULT.resultCode !== "INFO-0000" && resJson.RESULT.resultCode !== "00") {
+          throw new Error(`[${resJson.RESULT.resultCode}] ${resJson.RESULT.resultMsg}`);
+        }
+      }
+
+      // 계층 구조 디코딩
+      let rows = [];
+      const rootKeys = Object.keys(resJson);
+      for (const key of rootKeys) {
+        if (resJson[key] && resJson[key][1] && resJson[key][1].row) {
+          rows = resJson[key][1].row;
+          break;
+        }
+      }
+
+      if (rows.length > 0) {
+        connectionSuccess = true; 
+      }
+
+      // 레코드 매핑
+      rows.forEach((item, index) => {
+        const rawAddr = item.ROAD_NM_ADDR || item.LOTNO_ADDR || "";
+        const region = extractRegion(rawAddr);
+        const district = extractDistrict(rawAddr);
+        const formattedDate = parsePermitDate(item);
+
+        allFetchedData.push({
+          id: `${indName}_${index}_${formattedDate}`,
+          name: item.BPLC_NM || "상호미표시",
+          industry: item.SNTTN_BZSTAT_NM || indName,
+          region: region,
+          addr: rawAddr,
+          permit_date: formattedDate,
+          script: `안녕하세요, [${item.BPLC_NM || '대표님'}] 대표님!\n지자체 신규 인허가(${indName}) 취득을 진심으로 축하드립니다.\n\n${district} 상권 맞춤형 초기 인근 네이버 지도 검색 노출 최적화 패키지 제안을 위해 연락드렸습니다.\n간단한 영업 활성화 컨설팅이 가능하오니 관심 있으시면 언제든 편하게 회신 부탁드립니다.`
+        });
+      });
+
+    } catch (err) {
+      console.error(`${indName} 연동 장애 발생:`, err);
+      lastErrorMessage = err.message;
+    }
+  }
+
+  // 데이터 최종 렌더링 검사
+  if (connectionSuccess && allFetchedData.length > 0) {
+    leads = allFetchedData;
+    quotaTag.style.background = "#065f46";
+    quotaTag.style.color = "#34d399";
+    quotaTag.textContent = "API 실시간 연동 완료";
+    applyFilters();
+  } else {
+    console.warn("API 정상 응답 불가하여 로컬 목업 로드. 사유:", lastErrorMessage);
+    alert(`[실시간 API 연동 안내]\n\n원인: ${lastErrorMessage || "CORS 프록시 네트워크 서버 응답 혼선"}\n\n* 일시적 공용 프록시 과부하일 수 있습니다. 안전 조치를 위해 데모 대체 데이터를 로드합니다.`);
+    
+    generateMockOnFailure();
+    quotaTag.style.background = "#7f1d1d";
+    quotaTag.style.color = "#f87171";
+    quotaTag.textContent = `API 에러 (데모 데이터 로드됨)`;
+  }
+}
+
+// API 통신 완전 실패 시 로드되는 가상 데이터
+function generateMockOnFailure() {
+  const regions = ["부산광역시","울산광역시","경상남도"];
+  const inds = ["일반음식점","휴게음식점","이용업","미용업"];
+  const names = ["가온분식","라온카페","살롱드뷰티","중앙이발소","동백식당","그리다헤어","도란도란커피","한가득분식","울산네일","경남다방"];
+  const addrTail = ["부산광역시 수영구 광안로 12", "울산광역시 남구 번영로 88", "경상남도 창원시 성산구 중앙로 5"];
+  const today = new Date();
+  
+  leads = [];
+  for(let i=0; i<80; i++){
+    const rawAddr = addrTail[i % addrTail.length] + ` ${10+i}번길`;
+    const region = extractRegion(rawAddr);
+    const district = extractDistrict(rawAddr);
+    const industry = inds[i % inds.length];
+    const name = names[i % names.length] + (i+1);
+    const dayOffset = Math.floor(Math.random()*7);
+    const d = new Date(today.getTime() - dayOffset*86400000);
+    const permit = d.toISOString().slice(0,10);
+    
+    leads.push({
+      id: `MOCK_${i}`,
+      name, industry, region, addr: rawAddr, permit_date: permit,
+      script: `안녕하세요, ${district}의 ${name} [${industry}] 대표님.\n인허가 축하인사 올립니다!\n지도 상위노출 마케팅 제안차 연락드렸습니다.`
+    });
+  }
+  applyFilters();
+}
+
+// ==== 목록 출력 및 클릭 바인딩 ====
+function renderTable(){
+  const tb = qs("#leadTable tbody");
+  tb.innerHTML = "";
+  
+  if (filtered.length === 0) {
+    tb.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">조회 조건과 일치하는 실시간 데이터가 없습니다.</td></tr>`;
+    qs("#countInfo").textContent = "총 0건";
+    return;
+  }
+
+  filtered.forEach((item, idx)=>{
+    const tr = document.createElement("tr");
+    if(selectedId === item.id) tr.classList.add("selected");
+    
+    const district = extractDistrict(item.addr);
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td><strong style="color:var(--accent); font-weight:normal;">${item.name}</strong></td>
+      <td>${item.industry}</td>
+      <td>${item.region}</td>
+      <td>${district}</td>
+      <td>${item.permit_date}</td>
+    `;
+
+    tr.addEventListener("click", () => {
+      selectedId = item.id;
+      qsa("#leadTable tbody tr").forEach(r => r.classList.remove("selected"));
+      tr.classList.add("selected");
+      renderDetail(item.id);
+    });
+
+    tb.appendChild(tr);
+  });
+  qs("#countInfo").textContent = `총 ${filtered.length}건`;
+}
+
+function renderDetail(id){
+  const item = leads.find(x=>x.id===id);
+  if(!item){ 
+    qs("#detailPane").style.display="none"; 
+    qs("#detailInfo").style.display="block"; 
+    return; 
+  }
+  qs("#detailInfo").style.display="none";
+  qs("#detailPane").style.display="block";
+  qs("#dName").textContent = item.name;
+  qs("#dIndustry").textContent = item.industry;
+  qs("#dAddr").textContent = item.addr;
+  qs("#dPermit").textContent = item.permit_date;
+  qs("#dScript").textContent = item.script;
+}
+
+// ==== 실시간 필터 적용 ====
+function applyFilters(){
+  const reg = qsa("#regionFilter input:checked").map(x=>x.value);
+  const ind = qsa("#industryFilter input:checked").map(x=>x.value);
+  const q = qs("#searchBox").value.trim().toLowerCase();
+  const districtQ = qs("#districtBox").value.trim().toLowerCase();
+  const fd = qs("#fromDate").value;
+  const td = qs("#toDate").value;
+
+  filtered = leads.filter(x=>{
+    const inReg = reg.some(r => x.region.includes(r));
+    const inInd = ind.includes(x.industry);
+    const inQ = q ? (x.name.toLowerCase().includes(q) || x.addr.toLowerCase().includes(q)) : true;
+    const inDistrict = districtQ ? x.addr.toLowerCase().includes(districtQ) : true;
+    const inDate = (fd ? x.permit_date >= fd : true) && (td ? x.permit_date <= td : true);
+    
+    return inReg && inInd && inQ && inDistrict && inDate;
+  });
+  renderTable();
+}
+
+// ==== 이벤트 연결 ====
+qs("#apiFetchBtn").addEventListener("click", fetchPublicData);
+qs("#resetFilterBtn").addEventListener("click", ()=>{
+  qsa("#regionFilter input").forEach(x=>x.checked=true);
+  qsa("#industryFilter input").forEach(x=>x.checked=true);
+  initDates();
+  qs("#searchBox").value=""; qs("#districtBox").value="";
+  applyFilters();
+});
+
+qs("#searchBox").addEventListener("input", applyFilters);
+qs("#districtBox").addEventListener("input", applyFilters);
+
+// ==== 초기화: 최근 7일 설정 ====
+function initDates(){
+  const today = new Date();
+  const to = today.toISOString().slice(0,10);
+  const from = new Date(today.getTime()-6*86400000).toISOString().slice(0,10);
+  qs("#fromDate").value = from;
+  qs("#toDate").value = to;
+}
+
+initDates();
