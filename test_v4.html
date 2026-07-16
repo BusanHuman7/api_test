@@ -1,4 +1,31 @@
-order-radius:8px; padding:8px}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>신규 인허가 영업 자동화 – 메인(실시간 API 연동)</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#0f172a; --sub:#0c1426; --line:#253043;
+    --text:#e5e7eb; --muted:#9aa7bd; --accent:#60a5fa; --ok:#34d399; --warn:#fbbf24; --danger:#f87171;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; font-family:-apple-system, Segoe UI, Roboto, Arial; background:linear-gradient(180deg,#081120 0%, #0b1220 100%); color:var(--text)}
+  header{padding:16px 18px; border-bottom:1px solid var(--line); background:#0d162a; position:sticky; top:0; z-index:10}
+  header h1{margin:0; font-size:18px}
+  header .sub{color:var(--muted); font-size:13px; margin-top:4px}
+  .container{display:grid; grid-template-columns: 280px 1fr; gap:12px; padding:12px; max-width:1400px; margin:0 auto}
+  @media (max-width: 980px){ .container{grid-template-columns:1fr} }
+  .side{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px}
+  .main{display:grid; grid-template-rows: auto 1fr; gap:12px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px}
+  .card .hd{padding:10px 12px; border-bottom:1px solid var(--line); background:#0d162a; font-weight:600; font-size:14px}
+  .card .bd{padding:12px}
+  label{display:block; margin:6px 0 4px; color:#cbd5e1; font-size:13px}
+  .grp{margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed var(--line)}
+  .chkrow{display:flex; gap:8px; flex-wrap:wrap}
+  .chkrow label{display:flex; align-items:center; gap:6px; border:1px solid var(--line); padding:6px 8px; border-radius:8px; font-size:13px; background:#0c1426}
+  input[type="text"], select{width:100%; background:#0b1220; border:1px solid var(--line); color:#fff; border-radius:8px; padding:8px}
 
 
   input[type="date"]{background:#0b1220; border:1px solid var(--line); color:#fff; border-radius:8px; padding:6px} 
@@ -160,7 +187,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 </div>
 
 <script>
-
 // ==========================================
 // 🔴 [필수] 여기에 공공데이터포털 인증키를 입력하세요.
 // ==========================================
