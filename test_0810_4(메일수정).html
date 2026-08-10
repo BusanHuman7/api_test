@@ -526,34 +526,6 @@ function parsePermitDate(item) {
 }
 
 
-<!--   수정 전 코드 
-function applyFilters(){
-  const regValues = qsa("#regionFilter input:checked").map(x => x.value); 
-  const ind = qsa("#industryFilter input:checked").map(x => x.value);
-  let q = qs("#searchBox").value.trim().toLowerCase();
-
-  const fromDate = qs("#fromDate").value;
-  const toDate = qs("#toDate").value;
-
-  filtered = leads.filter(x => {
-    const inReg = regValues.some(v => x.addr.includes(v) || x.region.includes(v));
-    const inInd = ind.includes(x.originIndustryType);
-    const inQ = q ? (x.name.toLowerCase().includes(q) || x.addr.toLowerCase().includes(q) || x.telno.toLowerCase().includes(q) || x.district.toLowerCase().includes(q)) : true;
-    
-    let inDateRange = true;
-    if (fromDate && x.permit_date !== "날짜미상") inDateRange = inDateRange && (x.permit_date >= fromDate);
-    if (toDate && x.permit_date !== "날짜미상") inDateRange = inDateRange && (x.permit_date <= toDate);
-
-    x.targetEmail = matchBranchEmail(x.addr, x.district, x.originIndustryType);
-
-    return inReg && inInd && inQ && inDateRange;
-  });
-
-  renderTable();
-}
-
--->
-
 function applyFilters() {
   // 1. 기본 필터링 (지역, 업종 등)
   let result = [...allLeads];
