@@ -136,6 +136,8 @@
         <label><input type="checkbox" value="휴게음식점" checked> 휴게음식점</label>
         <label><input type="checkbox" value="이용업" checked> 이용업</label>
         <label><input type="checkbox" value="미용업" checked> 미용업</label>
+        <label><input type="checkbox" value="의원" checked> 의원</label>
+        <label><input type="checkbox" value="병원" checked> 병원</label>
       </div>
     </div>
 
@@ -380,7 +382,9 @@ async function fetchPublicData() {
     '휴게음식점': 'https://apis.data.go.kr/1741000/rest_cafes/info',
     '일반음식점': 'https://apis.data.go.kr/1741000/general_restaurants/info',
     '이용업': 'https://apis.data.go.kr/1741000/barber_shops/info',
-    '미용업': 'https://apis.data.go.kr/1741000/beauty_salons/info'
+    '미용업': 'https://apis.data.go.kr/1741000/beauty_salons/info',
+    '의원': 'https://apis.data.go.kr/1741000/clinics/info',
+    '병원': 'https://apis.data.go.kr/1741000/hospitals/info'
   };
 
   let allFetchedData = [];
