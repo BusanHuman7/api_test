@@ -320,9 +320,14 @@ qs("#addBranchBtn").addEventListener("click", () => {
   const emailInput = qs("#mapEmail").value.trim();
   if(!dist || !emailInput) { alert("구/동 명칭과 이메일을 입력하세요."); return; }
   
-  // 쉼표(,)나 공백으로 구분된 여러 이메일을 배열로 저장
-  const emailArr = emailInput.split(/[,,\s]+/).map(e => e.trim()).filter(e => e);
-  branchMap[dist] = emailArr;
+  // 수정: 쉼표(,)나 공백(스페이스 등) 기준으로 올바르게 이메일 분리
+  const newEmails = emailInput.split(/[,\s]+/).map(e => e.trim()).filter(e => e);
+  
+  if (branchMap[dist]) {
+    branchMap[dist] = [...new Set([...branchMap[dist], ...newEmails])];
+  } else {
+    branchMap[dist] = newEmails;
+  }
   
   qs("#mapDistrict").value = "";
   qs("#mapEmail").value = "";
