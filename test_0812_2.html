@@ -737,7 +737,7 @@ function downloadExcel() {
       `"${item.telno}"`,
       `"${item.permit_date}"`,
       `"${item.addr.replace(/"/g, '""')}"`,
-<!--      `"${item.targetEmail}"`,	-->
+<!--      `"${item.targetEmails}"`,	-->
       `"${cleanScript}"`
     ];
     csvContent += row.join(",") + "\n";
@@ -815,7 +815,7 @@ qs("#confirmSendMailBtn").addEventListener("click", () => {
     // 🎯 이메일별 그룹화 데이터 구성
     const groupedLeads = {};
     filtered.forEach(item => {
-      const email = item.targetEmail || "미지정";
+      const email = item.targetEmails || "미지정";
       if (!groupedLeads[email]) {
         groupedLeads[email] = [];
       }
