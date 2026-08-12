@@ -506,7 +506,7 @@ async function fetchPublicData() {
           district: district,
           addr: rawAddr,
           telno: item.TELNO || item.SITE_TEL || item.LOCAL_TELNO || item.TEL || "정보없음",
-          targetEmail: matchBranchEmail(rawAddr, district, indName),
+          targetEmails: matchBranchEmails(rawAddr, district, indName),
           permit_date: parsePermitDate(item),
           lat: item.Y || item.LAT || null,
           lng: item.X || item.LNG || null,
