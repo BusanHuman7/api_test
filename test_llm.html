@@ -615,7 +615,7 @@ qs("#aiGenerateBtn").addEventListener("click", async () => {
 
   try {
     const prompt = `당신은 통신 컨설턴트입니다. 신규 창업 매장 영업 스크립트를 작성해 주세요.\n- 상호명: ${currentSelectedItem.name}\n- 업종: ${currentSelectedItem.industry}\n- 위치: ${currentSelectedItem.addr}\n- 전화번호: ${currentSelectedItem.telno}`;
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -671,7 +671,7 @@ ${sampleStores ? `- 주요 주변 업소 예시:\n${sampleStores}` : ''}
 3. 🌐 초고속 인터넷/CCTV/WiFi 매장 통신 세팅 제안
 4. 💡 영업자 핵심 브리핑 팁`;
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -704,7 +704,7 @@ qs("#batchScriptBtn").addEventListener("click", async () => {
 
     try {
       const prompt = `신규 개업 매장 영업 스크립트 작성:\n상호: ${item.name}\n업종: ${item.industry}\n주소: ${item.addr}\n전화번호: ${item.telno}`;
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiKey}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
