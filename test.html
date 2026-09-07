@@ -151,6 +151,7 @@
         <label><input type="checkbox" value="미용업" checked> 미용업</label>
         <label><input type="checkbox" value="병원" checked> 병원</label>
         <label><input type="checkbox" value="의원" checked> 의원</label>
+        <label><input type="checkbox" value="약국" checked> 약국</label>
       </div>
     </div>
 
@@ -473,6 +474,7 @@ async function fetchPublicData() {
     '미용업': 'https://apis.data.go.kr/1741000/beauty_salons/info',
     '병원': 'https://apis.data.go.kr/1741000/hospitals/info',
     '의원': 'https://apis.data.go.kr/1741000/clinics/info'
+    '약국': 'https://apis.data.go.kr/1741000/pharmacies/info'
   };
 
   let allFetchedData = [];
