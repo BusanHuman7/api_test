@@ -202,9 +202,12 @@
         }
 
         async function fetchFredData(seriesId, apiKey, callback) {
-            const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=1`;
-            try {
-                const response = await fetch(url);
+            // CORS 프록시 URL(corsproxy.io)을 앞에 붙여 브라우저 차단을 우회합니다.
+	    const targetUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=1`;
+	    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+
+	    try {
+	        const response = await fetch(proxyUrl);
                 const data = await response.json();
                 if (data.observations && data.observations.length > 0) {
                     const val = data.observations[0].value;
