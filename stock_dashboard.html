@@ -144,105 +144,117 @@
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const savedAlpha = localStorage.getItem("ALPHA_KEY") || "";
-            const savedFred = localStorage.getItem("FRED_KEY") || "";
-            document.getElementById("alpha-key").value = savedAlpha;
-            document.getElementById("fred-key").value = savedFred;
+    document.addEventListener("DOMContentLoaded", () => {
+        const savedAlpha = localStorage.getItem("ALPHA_KEY") || "";
+        const savedFred = localStorage.getItem("FRED_KEY") || "";
+        document.getElementById("alpha-key").value = savedAlpha;
+        document.getElementById("fred-key").value = savedFred;
 
-            if (savedAlpha && savedFred) {
-                fetchAllData(savedAlpha, savedFred);
-            }
+        if (savedAlpha && savedFred) {
+            fetchAllData(savedAlpha, savedFred);
+        }
+    });
+
+    function saveKeysAndFetch() {
+        const alphaKey = document.getElementById("alpha-key").value.trim();
+        const fredKey = document.getElementById("fred-key").value.trim();
+
+        localStorage.setItem("ALPHA_KEY", alphaKey);
+        localStorage.setItem("FRED_KEY", fredKey);
+
+        if (!alphaKey || !fredKey) {
+            alert("Alpha Vantage와 FRED API 키를 모두 입력해주세요.");
+            return;
+        }
+
+        fetchAllData(alphaKey, fredKey);
+    }
+
+    // 딜레이용 유틸리티 함수 (ms 단위)
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    async function fetchAllData(alphaKey, fredKey) {
+        document.getElementById("last-updated").innerText = "업데이트 중...";
+
+        // 1. FRED 지표 목록 (병목 방지를 위해 순차적 호출 진행)
+        const fredTasks = [
+            { id: "FEDFUNDS", cb: (v) => { document.getElementById("fed-rate").innerText = v + "%"; document.getElementById("table-fed").innerText = v + "%"; } },
+            { id: "DGS10", cb: (v) => { document.getElementById("us10y-rate").innerText = v + "%"; document.getElementById("table-10y").innerText = v + "%"; } },
+            { id: "DGS2", cb: (v) => { document.getElementById("us2y-val").innerText = v + "%"; } },
+            { id: "VIXCLS", cb: (v) => { document.getElementById("vix-index").innerText = v; } },
+            { id: "DCOILWTICO", cb: (v) => { document.getElementById("wti-val").innerText = "$" + v; } }
+        ];
+
+        // FRED API 순차 실행 (호출 간 250ms 시차 추가로 408/CORS 에러 방지)
+        for (const task of fredTasks) {
+            await fetchFredDataWithFallback(task.id, fredKey, task.cb);
+            await delay(250);
+        }
+
+        // 2. Alpha Vantage API 호출 (환율)
+        await fetchAlphaFx("USD", "KRW", alphaKey, (val) => {
+            document.getElementById("usdkrw-rate").innerText = parseFloat(val).toLocaleString(undefined, { maximumFractionDigits: 2 }) + " 원";
         });
 
-        function saveKeysAndFetch() {
-            const alphaKey = document.getElementById("alpha-key").value.trim();
-            const fredKey = document.getElementById("fred-key").value.trim();
+        const now = new Date();
+        document.getElementById("last-updated").innerText = "마지막 업데이트: " + now.toLocaleTimeString("ko-KR");
+    }
 
-            localStorage.setItem("ALPHA_KEY", alphaKey);
-            localStorage.setItem("FRED_KEY", fredKey);
+    // 이중 프록시(Fallback)를 활용한 FRED 데이터 수집 함수
+    async function fetchFredDataWithFallback(seriesId, apiKey, callback) {
+        if (!apiKey) return;
 
-            if (!alphaKey || !fredKey) {
-                alert("Alpha Vantage와 FRED API 키를 모두 입력해주세요.");
-                return;
-            }
-
-            fetchAllData(alphaKey, fredKey);
-        }
-
-        async function fetchAllData(alphaKey, fredKey) {
-            document.getElementById("last-updated").innerText = "업데이트 중...";
-
-            // FRED API 불러오기
-            fetchFredData("FEDFUNDS", fredKey, (val) => {
-                document.getElementById("fed-rate").innerText = val + "%";
-                document.getElementById("table-fed").innerText = val + "%";
-            });
-            fetchFredData("DGS10", fredKey, (val) => {
-                document.getElementById("us10y-rate").innerText = val + "%";
-                document.getElementById("table-10y").innerText = val + "%";
-            });
-            fetchFredData("DGS2", fredKey, (val) => {
-                document.getElementById("us2y-val").innerText = val + "%";
-            });
-            fetchFredData("VIXCLS", fredKey, (val) => {
-                document.getElementById("vix-index").innerText = val;
-            });
-            fetchFredData("DCOILWTICO", fredKey, (val) => {
-                document.getElementById("wti-val").innerText = "$" + val;
-            });
-
-            // Alpha Vantage API 불러오기
-            fetchAlphaFx("USD", "KRW", alphaKey, (val) => {
-                document.getElementById("usdkrw-rate").innerText = parseFloat(val).toLocaleString(undefined, {maximumFractionDigits: 2}) + " 원";
-            });
-
-            const now = new Date();
-            document.getElementById("last-updated").innerText = "마지막 업데이트: " + now.toLocaleTimeString("ko-KR");
-        }
-
-        async function fetchFredData(seriesId, apiKey, callback) {
-	    if (!apiKey) return;
-
-	    // FRED 대상 URL
-	    const targetUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=1`;
-    
-	    // api.allorigins.win CORS 우회 프록시 사용
-	    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-
-	    try {
-	        const response = await fetch(proxyUrl);
+        const targetUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=1`;
         
-	        if (!response.ok) {
-	            throw new Error(`HTTP 에러 상태: ${response.status}`);
-	        }
+        // 1차/2차 우회 프록시 서버 라우트
+        const proxies = [
+            (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+        ];
 
-        	const data = await response.json();
-	        
-	        if (data.observations && data.observations.length > 0) {
-	            const val = data.observations[0].value;
-	            callback(val !== "." ? val : "N/A");
-	        } else {
-	            console.warn(`[FRED] ${seriesId} 데이터가 없거나 Key가 유효하지 않습니다.`);
-	        }
-	    } catch (err) {
-	        console.error(`FRED Fetch Error (${seriesId}):`, err);
-	    }
-	}
-
-        async function fetchAlphaFx(from, to, apiKey, callback) {
-            const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${from}&to_currency=${to}&apikey=${apiKey}`;
+        for (let i = 0; i < proxies.length; i++) {
             try {
-                const response = await fetch(url);
+                const proxyUrl = proxies[i](targetUrl);
+                const response = await fetch(proxyUrl);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
                 const data = await response.json();
-                if (data["Realtime Currency Exchange Rate"]) {
-                    const rate = data["Realtime Currency Exchange Rate"]["5. Exchange Rate"];
-                    callback(rate);
+                if (data.observations && data.observations.length > 0) {
+                    const val = data.observations[0].value;
+                    callback(val !== "." ? val : "N/A");
+                    return; // 성공 시 종료
                 }
             } catch (err) {
-                console.error("AlphaVantage FX Error:", err);
+                console.warn(`[FRED Retry Notice] ${seriesId} (${i + 1}차 프록시 실패):`, err.message);
+                if (i === proxies.length - 1) {
+                    console.error(`[FRED Final Error] ${seriesId} 수집에 최종 실패했습니다.`);
+                }
             }
         }
-    </script>
+    }
+
+    // Alpha Vantage FX 데이터 수집 함수
+    async function fetchAlphaFx(from, to, apiKey, callback) {
+        if (!apiKey) return;
+
+        const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${from}&to_currency=${to}&apikey=${apiKey}`;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data["Realtime Currency Exchange Rate"]) {
+                const rate = data["Realtime Currency Exchange Rate"]["5. Exchange Rate"];
+                callback(rate);
+            } else if (data["Note"] || data["Information"]) {
+                console.warn("[Alpha Vantage] 분당 호출 제한 도달 (1분 후 시도)");
+            }
+        } catch (err) {
+            console.error("AlphaVantage FX Error:", err);
+        }
+    }
+</script>
 </body>
 </html>
