@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MY STOCK DASHBOARD V2.1 - API 진단</title>
+<style>
+body{margin:0;background:#0b1220;color:#eef4ff;font-family:Arial,'Noto Sans KR',sans-serif}.wrap{max-width:1200px;margin:auto;padding:22px}
+h1{margin:0 0 5px}.muted{color:#95a5bf;font-size:13px}.box{background:#121d30;border:1px solid #293954;border-radius:12px;padding:15px;margin:12px 0}
+input,button{padding:10px;border-radius:8px;border:1px solid #33445f;background:#091321;color:#fff}input{width:300px}button{cursor:pointer;background:#1c477b;margin:4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.ok{color:#42d392}.bad{color:#ff707a}.warn{color:#ffd166}
+.status{font-size:14px;line-height:1.8}.log{background:#07101d;border-radius:8px;padding:12px;min-height:130px;white-space:pre-wrap;font:12px Consolas,monospace;color:#b9c7dc;overflow:auto}
+table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #293954;text-align:left;font-size:13px}th{color:#95a5bf}
+@media(max-width:700px){.grid{grid-template-columns:1fr}input{width:90%}}
+</style></head>
+<body><div class="wrap">
+<h1>🔌 MY STOCK DASHBOARD V2.1</h1><div class="muted">FRED / Alpha Vantage API 연결 진단용 버전</div>
+
+<div class="box">
+<input id="fred" type="password" placeholder="FRED API Key">
+<input id="av" type="password" placeholder="Alpha Vantage API Key">
+<br>
+<button onclick="save()">🔐 저장</button><button onclick="testF()">FRED 테스트</button><button onclick="testA()">Alpha Vantage 테스트</button><button onclick="testAll()">🧪 전체 테스트</button>
+</div>
+
+<div class="grid">
+<div class="box"><h3>FRED</h3><div id="fs" class="status">대기 중</div></div>
+<div class="box"><h3>Alpha Vantage</h3><div id="as" class="status">대기 중</div></div>
+</div>
+
+<div class="box"><h3>📊 실제 응답 데이터</h3><table><tr><th>항목</th><th>값</th></tr>
+<tr><td>Fed Funds (DFF)</td><td id="dff">-</td></tr><tr><td>US 10Y (DGS10)</td><td id="dgs10">-</td></tr><tr><td>USD/KRW</td><td id="fx">-</td></tr><tr><td>IBM 테스트 Quote</td><td id="ibm">-</td></tr></table></div>
+
+<div class="box"><h3>🛠 진단 로그</h3><div id="log" class="log">여기에 API 요청/응답 상태가 표시됩니다.</div></div>
+
+<div class="box muted">
+<b>정상이라면:</b> FRED는 DFF/ DGS10 값이 나오고, Alpha Vantage는 USD/KRW와 IBM Quote 값이 나옵니다.
+<br><br>
+<b>중요:</b> Alpha Vantage 무료 플랜은 하루 25회 요청 제한이 있으므로 테스트를 반복해서 누르지 마세요. 미국 실시간/15분 지연 데이터는 무료 범위가 아닙니다.
+</div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+function log(s){$('log').textContent=new Date().toLocaleTimeString()+"  "+s+"\n"+$('log').textContent}
+function save(){localStorage.setItem('fredKey',$('fred').value.trim());localStorage.setItem('avKey',$('av').value.trim());log('API Key를 브라우저에 저장했습니다.');}
+function load(){$('fred').value=localStorage.getItem('fredKey')||'';$('av').value=localStorage.getItem('avKey')||''}
+async function testF(){
+ const k=$('fred').value.trim(); if(!k){$('fs').innerHTML='<span class="bad">❌ FRED Key가 없습니다.</span>';return}
+ $('fs').textContent='⏳ 요청 중...';log('FRED DFF 요청 시작');
+ try{
+  const u='https://api.stlouisfed.org/fred/series/observations?series_id=DFF&api_key='+encodeURIComponent(k)+'&file_type=json&sort_order=desc&limit=1';
+  const r=await fetch(u); const t=await r.text(); log('FRED HTTP '+r.status);
+  if(!r.ok)throw new Error(t);
+  const j=JSON.parse(t); const v=j.observations?.[0]?.value;
+  if(v==null)throw new Error(t);
+  $('dff').textContent=v+'%';$('fs').innerHTML='<span class="ok">🟢 정상 연결 — DFF='+v+'%</span>';
+ }catch(e){$('fs').innerHTML='<span class="bad">❌ 실패</span><br>'+String(e).slice(0,700);log('FRED 오류: '+e)}
+}
+async function av(fn,params){
+ const k=$('av').value.trim(); if(!k)throw new Error('Alpha Vantage Key가 없습니다.');
+ const u='https://www.alphavantage.co/query?function='+fn+'&'+params+'&apikey='+encodeURIComponent(k);
+ const r=await fetch(u); const t=await r.text(); log('Alpha '+fn+' HTTP '+r.status);
+ let j; try{j=JSON.parse(t)}catch{throw new Error(t)}
+ if(j.Note||j.Information)throw new Error(j.Note||j.Information);
+ if(!r.ok)throw new Error(t); return j
+}
+async function testA(){
+ if(!$('av').value.trim()){$('as').innerHTML='<span class="bad">❌ Alpha Vantage Key가 없습니다.</span>';return}
+ $('as').textContent='⏳ 요청 중...';
+ try{
+  const fx=await av('CURRENCY_EXCHANGE_RATE','from_currency=USD&to_currency=KRW');
+  const x=fx?.['Realtime Currency Exchange Rate']?.['5. Exchange Rate'];
+  if(!x)throw new Error('USD/KRW 응답에 환율 값이 없습니다: '+JSON.stringify(fx).slice(0,500));
+  $('fx').textContent=Number(x).toLocaleString('ko-KR');
+  const q=await av('GLOBAL_QUOTE','symbol=IBM'); const price=q?.['Global Quote']?.['05. price'];
+  if(price)$('ibm').textContent='$'+price;
+  $('as').innerHTML='<span class="ok">🟢 정상 연결 — USD/KRW='+Number(x).toLocaleString('ko-KR')+'</span>';
+ }catch(e){$('as').innerHTML='<span class="bad">❌ 실패</span><br>'+String(e).slice(0,700);log('Alpha 오류: '+e)}
+}
+async function testAll(){save();await testF();await testA();log('전체 테스트 완료')}
+load();
+</script></body></html>
