@@ -202,21 +202,33 @@
         }
 
         async function fetchFredData(seriesId, apiKey, callback) {
-            // CORS 프록시 URL(corsproxy.io)을 앞에 붙여 브라우저 차단을 우회합니다.
+	    if (!apiKey) return;
+
+	    // FRED 대상 URL
 	    const targetUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=1`;
-	    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+    
+	    // api.allorigins.win CORS 우회 프록시 사용
+	    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
 
 	    try {
 	        const response = await fetch(proxyUrl);
-                const data = await response.json();
-                if (data.observations && data.observations.length > 0) {
-                    const val = data.observations[0].value;
-                    callback(val !== "." ? val : "N/A");
-                }
-            } catch (err) {
-                console.error("FRED Fetch Error:", err);
-            }
-        }
+        
+	        if (!response.ok) {
+	            throw new Error(`HTTP 에러 상태: ${response.status}`);
+	        }
+
+        	const data = await response.json();
+	        
+	        if (data.observations && data.observations.length > 0) {
+	            const val = data.observations[0].value;
+	            callback(val !== "." ? val : "N/A");
+	        } else {
+	            console.warn(`[FRED] ${seriesId} 데이터가 없거나 Key가 유효하지 않습니다.`);
+	        }
+	    } catch (err) {
+	        console.error(`FRED Fetch Error (${seriesId}):`, err);
+	    }
+	}
 
         async function fetchAlphaFx(from, to, apiKey, callback) {
             const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${from}&to_currency=${to}&apikey=${apiKey}`;
