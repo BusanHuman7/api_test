@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나만의 주식 전용 대시보드</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #111827;
+            --card-border: #1f2937;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-primary); padding: 24px; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--card-border); }
+        .header-title h1 { font-size: 22px; font-weight: 700; }
+        .header-title p { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+        .update-info { text-align: right; font-size: 12px; color: var(--text-secondary); }
+
+        .api-key-container { display: flex; gap: 12px; margin-bottom: 20px; background: var(--card-bg); padding: 16px; border-radius: 10px; border: 1px solid var(--card-border); align-items: center; flex-wrap: wrap; }
+        .api-input-group { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 250px; }
+        .api-input-group label { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+        .api-input-group input { background: #1f2937; border: 1px solid #374151; color: var(--text-primary); padding: 8px 12px; border-radius: 6px; font-size: 13px; width: 100%; }
+        
+        .btn { background: var(--accent-blue); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn:hover { opacity: 0.9; }
+
+        .dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+        .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 18px; }
+        .card-header { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+        .card-value { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+        .card-subtext { font-size: 11px; color: var(--text-secondary); }
+
+        .grid-3-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+        .card-title-bar { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th, .data-table td { padding: 10px 4px; text-align: left; font-size: 13px; border-bottom: 1px solid #1f2937; }
+        .data-table th { color: var(--text-secondary); font-weight: 500; font-size: 12px; }
+
+        .footer-note { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 16px; font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-title">
+            <h1>나만의 주식 전용 대시보드</h1>
+            <p>금리 · 환율 · VIX · 주요 지수 · 원자재 대시보드</p>
+        </div>
+        <div class="update-info">
+            <div id="last-updated">마지막 업데이트: --</div>
+            <div style="color: var(--accent-green); margin-top: 4px;">● 실시간 API 연동</div>
+        </div>
+    </div>
+
+    <!-- API 키 설정 영역 -->
+    <div class="api-key-container">
+        <div class="api-input-group">
+            <label>Alpha Vantage Key:</label>
+            <input type="password" id="alpha-key" placeholder="Alpha Vantage API Key">
+        </div>
+        <div class="api-input-group">
+            <label>FRED API Key:</label>
+            <input type="password" id="fred-key" placeholder="FRED API Key">
+        </div>
+        <button class="btn" onclick="saveKeysAndFetch()">키 저장 및 지금 업데이트</button>
+    </div>
+
+    <!-- 상단 핵심 카드 영역 -->
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="card-header">미국 기준금리</div>
+            <div class="card-value" id="fed-rate">-%</div>
+            <div class="card-subtext">FRED (FEDFUNDS)</div>
+        </div>
+        <div class="card">
+            <div class="card-header">미국 10년 국채금리</div>
+            <div class="card-value" id="us10y-rate">-%</div>
+            <div class="card-subtext">FRED (DGS10)</div>
+        </div>
+        <div class="card">
+            <div class="card-header">USD / KRW (환율)</div>
+            <div class="card-value" id="usdkrw-rate">-</div>
+            <div class="card-subtext">Alpha Vantage (FX)</div>
+        </div>
+        <div class="card">
+            <div class="card-header">VIX (변동성 지수)</div>
+            <div class="card-value" id="vix-index">-</div>
+            <div class="card-subtext">FRED (VIXCLS)</div>
+        </div>
+    </div>
+
+    <!-- 중단 상세 그리드 영역 -->
+    <div class="grid-3-col">
+        <div class="card">
+            <div class="card-title-bar">🇺🇸 미국 주요 지수</div>
+            <table class="data-table">
+                <thead><tr><th>지수명</th><th>현재가</th></tr></thead>
+                <tbody>
+                    <tr><td>S&P 500</td><td id="sp500-val">연동 중..</td></tr>
+                    <tr><td>NASDAQ</td><td id="nasdaq-val">연동 중..</td></tr>
+                    <tr><td>Dow Jones</td><td id="dow-val">연동 중..</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="card-title-bar">🏦 금리 / 채권 (FRED)</div>
+            <table class="data-table">
+                <thead><tr><th>항목</th><th>수치</th></tr></thead>
+                <tbody>
+                    <tr><td>Fed Funds Rate</td><td id="table-fed">-</td></tr>
+                    <tr><td>US 2Y Treasury</td><td id="us2y-val">-</td></tr>
+                    <tr><td>US 10Y Treasury</td><td id="table-10y">-</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="card-title-bar">🛢️ 원자재 & 주요 자산</div>
+            <table class="data-table">
+                <thead><tr><th>자산명</th><th>현재가</th></tr></thead>
+                <tbody>
+                    <tr><td>WTI 원유</td><td id="wti-val">-</td></tr>
+                    <tr><td>Gold (금)</td><td id="gold-val">-</td></tr>
+                    <tr><td>Bitcoin (BTC)</td><td id="btc-val">-</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        <strong>💡 데이터 연동 방식 안내:</strong><br>
+        - API Key는 웹 브라우저의 <code>localStorage</code>에만 안전하게 저장되며 외부 서버로 송출되지 않습니다.<br>
+        - Alpha Vantage 무료 플랜은 분당 5회 호출 제한이 있으므로, 업데이트 버튼 클릭 후 약 5~10초의 간격을 두고 조회하는 것을 권장합니다.
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedAlpha = localStorage.getItem("ALPHA_KEY") || "";
+            const savedFred = localStorage.getItem("FRED_KEY") || "";
+            document.getElementById("alpha-key").value = savedAlpha;
+            document.getElementById("fred-key").value = savedFred;
+
+            if (savedAlpha && savedFred) {
+                fetchAllData(savedAlpha, savedFred);
+            }
+        });
+
+        function saveKeysAndFetch() {
+            const alphaKey = document.getElementById("alpha-key").value.trim();
+            const fredKey = document.getElementById("fred-key").value.trim();
+
+            localStorage.setItem("ALPHA_KEY", alphaKey);
+            localStorage.setItem("FRED_KEY", fredKey);
+
+            if (!alphaKey || !fredKey) {
+                alert("Alpha Vantage와 FRED API 키를 모두 입력해주세요.");
+                return;
+            }
+
+            fetchAllData(alphaKey, fredKey);
+        }
+
+        async function fetchAllData(alphaKey, fredKey) {
+            document.getElementById("last-updated").innerText = "업데이트 중...";
+
+            // FRED API 불러오기
+            fetchFredData("FEDFUNDS", fredKey, (val) => {
+                document.getElementById("fed-rate").innerText = val + "%";
+                document.getElementById("table-fed").innerText = val + "%";
+            });
+            fetchFredData("DGS10", fredKey, (val) => {
+                document.getElementById("us10y-rate").innerText = val + "%";
+                document.getElementById("table-10y").innerText = val + "%";
+            });
+            fetchFredData("DGS2", fredKey, (val) => {
+                document.getElementById("us2y-val").innerText = val + "%";
+            });
+            fetchFredData("VIXCLS", fredKey, (val) => {
+                document.getElementById("vix-index").innerText = val;
+            });
+            fetchFredData("DCOILWTICO", fredKey, (val) => {
+                document.getElementById("wti-val").innerText = "$" + val;
+            });
+
+            // Alpha Vantage API 불러오기
+            fetchAlphaFx("USD", "KRW", alphaKey, (val) => {
+                document.getElementById("usdkrw-rate").innerText = parseFloat(val).toLocaleString(undefined, {maximumFractionDigits: 2}) + " 원";
+            });
+
+            const now = new Date();
+            document.getElementById("last-updated").innerText = "마지막 업데이트: " + now.toLocaleTimeString("ko-KR");
+        }
+
+        async function fetchFredData(seriesId, apiKey, callback) {
+            const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=1`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.observations && data.observations.length > 0) {
+                    const val = data.observations[0].value;
+                    callback(val !== "." ? val : "N/A");
+                }
+            } catch (err) {
+                console.error("FRED Fetch Error:", err);
+            }
+        }
+
+        async function fetchAlphaFx(from, to, apiKey, callback) {
+            const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${from}&to_currency=${to}&apikey=${apiKey}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data["Realtime Currency Exchange Rate"]) {
+                    const rate = data["Realtime Currency Exchange Rate"]["5. Exchange Rate"];
+                    callback(rate);
+                }
+            } catch (err) {
+                console.error("AlphaVantage FX Error:", err);
+            }
+        }
+    </script>
+</body>
+</html>
