@@ -716,7 +716,7 @@ qs("#batchScriptBtn").addEventListener("click", async () => {
     } catch (e) {
       item.aiScript = "오류 발생";
     }
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 1000));
   }
   scriptBox.textContent = `✅ 총 ${filtered.length}건의 영업 스크립트 생성이 완료되었습니다!`;
 });
