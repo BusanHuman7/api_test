@@ -335,6 +335,35 @@ function renderBranchList() {
   localStorage.setItem("BRANCH_MAP_LIST", JSON.stringify(branchMapList));
 }
 
+// 🎯 업종 우선 및 구/동 매칭 로직
+function matchBranchEmail(addr, district, originIndustryType) {
+  const fullAddr = addr || "";
+  const distStr = district || "";
+  const isHospitalType = ["병원", "의원", "병원,의원"].includes(originIndustryType);
+  let foundEmails = new Set();
+
+  // 규칙 검색
+  branchMapList.forEach(b => {
+    const isHospitalCategory = ["병원,의원", "병원", "의원"].includes(b.industry);
+    const matchHospital = isHospitalType && isHospitalCategory;
+    const matchGeneral = !isHospitalType && !isHospitalCategory && b.district !== "DEFAULT";
+    
+    // 조건 매칭
+    if (matchHospital || matchGeneral) {
+      if (b.district === "ALL" || distStr.includes(b.district) || fullAddr.includes(b.district)) {
+        foundEmails.add(b.email);
+      }
+    }
+  });
+
+  if (foundEmails.size === 0) {
+    const defaultRule = branchMapList.find(b => b.district === "DEFAULT");
+    if (defaultRule) foundEmails.add(defaultRule.email);
+  }
+  return Array.from(foundEmails);
+}
+
+
 // 구/동 전체 삭제 함수
 function removeBranchByDist(district) {
   if(!confirm(`'${district}'에 등록된 모든 유통망을 삭제하시겠습니까?`)) return;
@@ -408,33 +437,6 @@ function removeBranch(index) {
   applyFilters();
 }
 
-// 🎯 업종 우선 및 구/동 매칭 로직
-function matchBranchEmails(addr, district, originIndustryType) {
-  const fullAddr = addr || "";
-  const distStr = district || "";
-  const isHospitalType = ["병원", "의원", "병원,의원"].includes(originIndustryType);
-  let foundEmails = new Set();
-
-  // 규칙 검색
-  branchMapList.forEach(b => {
-    const isHospitalCategory = ["병원,의원", "병원", "의원"].includes(b.industry);
-    const matchHospital = isHospitalType && isHospitalCategory;
-    const matchGeneral = !isHospitalType && !isHospitalCategory && b.district !== "DEFAULT";
-    
-    // 조건 매칭
-    if (matchHospital || matchGeneral) {
-      if (b.district === "ALL" || distStr.includes(b.district) || fullAddr.includes(b.district)) {
-        foundEmails.add(b.email);
-      }
-    }
-  });
-
-  if (foundEmails.size === 0) {
-    const defaultRule = branchMapList.find(b => b.district === "DEFAULT");
-    if (defaultRule) foundEmails.add(defaultRule.email);
-  }
-  return Array.from(foundEmails);
-}
 
 // 📍 소상공인진흥공단 반경 상권 조회 API
 async function fetchCommercialDistrictData(lat, lng) {
@@ -460,29 +462,36 @@ async function fetchCommercialDistrictData(lat, lng) {
 }
 
 async function fetchPublicData() {
-  const rawServiceKey = CONFIG.PUBLIC_API_KEY || localStorage.getItem("PUBLIC_API_KEY");
-  if(!rawServiceKey) { 
+  const rawServiceKey = (typeof CONFIG !== 'undefined' && CONFIG.PUBLIC_API_KEY) 
+    ? CONFIG.PUBLIC_API_KEY 
+    : localStorage.getItem("PUBLIC_API_KEY");
+
+  if (!rawServiceKey) { 
     alert("API Key가 설정되지 않았습니다."); 
     return; 
   }
 
-  // 서비스키가 이미 인코딩되어 있는지 확인 후 처리
-  const serviceKey = rawServiceKey.includes('%') ? rawServiceKey : encodeURIComponent(rawServiceKey);
-
+  // 디코딩 후 안전하게 재인코딩
+  const serviceKey = encodeURIComponent(decodeURIComponent(rawServiceKey));
   const selectedInds = qsa("#industryFilter input:checked").map(x => x.value);
-  const rawFrom = qs("#fromDate").value;
-  const rawTo = qs("#toDate").value;
+  const rawFrom = qs("#fromDate").value; // 예: "2026-09-17"
+  const rawTo = qs("#toDate").value;     // 예: "2026-09-17"
   
   if (!rawFrom || !rawTo) {
     alert("인허가일자 검색 시작일과 종료일을 지정해 주세요.");
     return;
   }
+
+  // YYYYMMDD 8자리 숫자 포맷으로 변환
+  const fromClean = rawFrom.replace(/-/g, "");
   
-  const fromDateQuery = rawFrom.replace(/-/g, "");
-  const toDateQuery = rawTo.replace(/-/g, "");
+  // LT(미만) 조건을 위해 종료일 + 1일 계산 (9/17 검색 시 9/18 미만)
+  const endDateObj = new Date(rawTo);
+  endDateObj.setDate(endDateObj.getDate() + 1);
+  const ltClean = endDateObj.toISOString().slice(0, 10).replace(/-/g, "");
 
   const tb = qs("#leadTable tbody");
-  tb.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px;"><span class="spinner"></span> 데이터를 수집 중입니다...</td></tr>`;
+  tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px;"><span class="spinner"></span> 지정한 날짜 및 지역 조건으로 API 데이터를 조회 중입니다...</td></tr>`;
 
   const endpoints = {
     '휴게음식점': 'https://apis.data.go.kr/1741000/rest_cafes/info',
@@ -500,49 +509,65 @@ async function fetchPublicData() {
     const baseUrl = endpoints[indName];
     if (!baseUrl) continue;
 
-    // 인증키 및 날짜 파라미터 조합
-    const queryParams = `?serviceKey=${serviceKey}&pageNo=1&numOfRows=500&type=json&authDateStart=${fromDateQuery}&authDateEnd=${toDateQuery}`;
-    
-    try {
-      const response = await fetch(baseUrl + queryParams);
-      if(!response.ok) continue;
-      const resJson = await response.json();
+    let pageNo = 1;
+    let maxPages = 10; // 명세에 맞게 조건을 정밀 타격하므로 10페이지 이내로 완결됨
 
-      // 공공데이터 API 특 유의 items 구조 예외 처리
-      let rawItems = resJson?.response?.body?.items?.item;
-      let rows = [];
+    while (pageNo <= maxPages) {
+      // 전달해주신 요청 변수 명세서 규격에 맞춘 쿼리스트링 생성
+      const queryParams = `?serviceKey=${serviceKey}` +
+        `&pageNo=${pageNo}` +
+        `&numOfRows=100` + // 명세서 최대 100
+        `&returnType=json` +
+        `&${encodeURIComponent('cond[LCPMT_YMD::GTE]')}=${fromClean}` + // 시작일 이상
+        `&${encodeURIComponent('cond[LCPMT_YMD::LT]')}=${ltClean}`;     // 종료일+1일 미만
 
-      if (Array.isArray(rawItems)) {
-        rows = rawItems;
-      } else if (rawItems && typeof rawItems === 'object') {
-        rows = [rawItems]; // 단일 객체인 경우 배열로 감쌈
-      }
+      try {
+        const response = await fetch(baseUrl + queryParams);
+        if (!response.ok) break;
+        const resJson = await response.json();
 
-      rows.forEach((item, index) => {
-        const rawAddr = item.ROAD_NM_ADDR || item.LOTNO_ADDR || item.SITE_ADDR || "";
-        const tokens = rawAddr.trim().split(/\s+/);
-        const district = tokens[1] || "-";
-        const permitDateFormatted = parsePermitDate(item);
+        let rawItems = resJson?.response?.body?.items?.item;
+        let rows = [];
 
-        allFetchedData.push({
-          id: `${indName}_${index}_${item.MNG_NO || index}`,
-          name: item.BPLC_NM || item.NAME || "상호미표시",
-          industry: item.BZSTAT_SE_NM || indName, // 세부 업종명
-          originIndustryType: indName, // 대분류 업종명 (필터링 핵심 키)
-          region: tokens[0] || "기타지역",
-          district: district,
-          addr: rawAddr,
-          telno: item.TELNO || item.SITE_TEL || item.LOCAL_TELNO || item.TEL || "정보없음",
-          mobile: item.HP || item.MOBILE || "정보없음",
-          targetEmail: matchBranchEmail(rawAddr, district, indName),
-          permit_date: permitDateFormatted,
-          lat: item.Y || item.LAT || null,
-          lng: item.X || item.LNG || null,
-          aiScript: ""
+        if (Array.isArray(rawItems)) {
+          rows = rawItems;
+        } else if (rawItems && typeof rawItems === 'object') {
+          rows = [rawItems];
+        }
+
+        if (rows.length === 0) break;
+
+        rows.forEach((item, index) => {
+          const rawAddr = item.ROAD_NM_ADDR || item.LOTNO_ADDR || item.SITE_ADDR || "";
+          const tokens = rawAddr.trim().split(/\s+/);
+          const district = tokens[1] || "-";
+          const permitDateFormatted = parsePermitDate(item);
+
+          allFetchedData.push({
+            id: `${indName}_p${pageNo}_${index}_${item.MNG_NO || index}`,
+            name: item.BPLC_NM || item.NAME || "상호미표시",
+            industry: `${item.BZSTAT_SE_NM || '미분류'} (${indName})`,
+            originIndustryType: indName,
+            region: tokens[0] || "기타지역",
+            district: district,
+            addr: rawAddr,
+            telno: item.TELNO || item.SITE_TEL || item.LOCAL_TELNO || item.TEL || "정보없음",
+            mobile: item.HP || item.MOBILE || "정보없음",
+            targetEmail: "",
+            permit_date: permitDateFormatted,
+            lat: item.Y || item.LAT || null,
+            lng: item.X || item.LNG || null,
+            aiScript: ""
+          });
         });
-      });
-    } catch (err) {
-      console.error(`${indName} 수집 중 오류:`, err);
+
+        if (rows.length < 100) break; // 100건 미만이면 다음 페이지가 없으므로 종료
+        pageNo++;
+
+      } catch (err) {
+        console.error(`${indName} (${pageNo}페이지) 수집 중 오류:`, err);
+        break;
+      }
     }
   }
 
@@ -550,12 +575,24 @@ async function fetchPublicData() {
   applyFilters();
 }
 
-function parsePermitDate(item) {
-  let rawDate = item.LCPMT_YMD || item.DAT_UPDT_PNT || item.PNT_YMD || item.PERMIT_DATE || "";
-  let digits = rawDate.replace(/[^0-9]/g, "");
-  return digits.length >= 8 ? `${digits.substring(0,4)}-${digits.substring(4,6)}-${digits.substring(6,8)}` : "날짜미상";
+
+// 1. 날짜 추출 및 정규화 (YYYYMMDD 8자리 숫자만 추출)
+function getCleanDateString(raw) {
+  if (!raw) return "";
+  const digits = String(raw).replace(/[^0-9]/g, "");
+  return digits.length >= 8 ? digits.substring(0, 8) : "";
 }
 
+function parsePermitDate(item) {
+  let rawDate = item.LCPMT_YMD || item.PERMIT_DATE || item.PNT_YMD || item.AUTH_DATE || item.LCPMT_DATE || item.CHG_YMD || item.DAT_UPDT_PNT || "";
+  const clean = getCleanDateString(rawDate);
+  if (clean.length === 8) {
+    return `${clean.substring(0,4)}-${clean.substring(4,6)}-${clean.substring(6,8)}`;
+  }
+  return "날짜미상";
+}
+
+// 2. 완벽 매칭형 applyFilters 함수
 function applyFilters() {
   let result = [...leads];
 
@@ -563,22 +600,26 @@ function applyFilters() {
   const selectedInds = qsa("#industryFilter input:checked").map(x => x.value);
   const keyword = qs("#searchBox").value.trim().toLowerCase();
   
-  const fromDate = qs("#fromDate").value;
-  const toDate = qs("#toDate").value;
+  // 검색 화면의 날짜 입력값 (YYYYMMDD 숫자로 통일)
+  const fromClean = getCleanDateString(qs("#fromDate").value);
+  const toClean = getCleanDateString(qs("#toDate").value);
 
   result = result.filter(item => {
-    // 1. 지역 조건 (경상남도 / 경남 포함 여부)
+    // A. 지역 조건 검사 (경남/경상남도/부산/울산 포괄 매칭)
     const matchReg = selectedRegions.some(reg => {
-      if (reg.includes("경상남도") || reg.includes("경남")) {
-        return item.region.includes("경남") || item.region.includes("경상남도") || item.addr.includes("경상남도") || item.addr.includes("경남");
+      const fullText = (item.region + " " + item.addr).toLowerCase();
+      if (reg.includes("경남") || reg.includes("경상남도")) {
+        return fullText.includes("경남") || fullText.includes("경상남도");
       }
-      return item.region.includes(reg) || item.addr.includes(reg);
+      if (reg.includes("부산")) return fullText.includes("부산");
+      if (reg.includes("울산")) return fullText.includes("울산");
+      return fullText.includes(reg.toLowerCase());
     });
 
-    // 2. 업종 조건 (originIndustryType 기준 검사)
+    // B. 업종 조건 검사
     const matchInd = selectedInds.includes(item.originIndustryType);
 
-    // 3. 검색어 조건
+    // C. 검색어 조건 검사
     const matchKw = !keyword || 
       item.name.toLowerCase().includes(keyword) || 
       item.addr.toLowerCase().includes(keyword) || 
@@ -586,21 +627,32 @@ function applyFilters() {
       item.mobile.toLowerCase().includes(keyword) || 
       item.district.toLowerCase().includes(keyword);
 
-    // 4. 인허가일자 검증 (fromDate ~ toDate 범위)
+    // D. 인허가일자 범위 검사 (YYYYMMDD 숫자 기준 완벽 비교)
     let matchDate = true;
-    if (fromDate && toDate && item.permit_date && item.permit_date !== "날짜미상") {
-      matchDate = (item.permit_date >= fromDate && item.permit_date <= toDate);
+    const itemDateClean = getCleanDateString(item.permit_date);
+    
+    if (fromClean && toClean) {
+      if (itemDateClean.length === 8) {
+        matchDate = (itemDateClean >= fromClean && itemDateClean <= toClean);
+      }
     }
 
     return matchReg && matchInd && matchKw && matchDate;
   });
 
+  // 이메일 매칭 함수 안전 호출 (단수/복수형 이름 모두 대응)
+  const emailFunc = (typeof matchBranchEmails === 'function') ? matchBranchEmails : (typeof matchBranchEmail === 'function' ? matchBranchEmail : null);
+  
   result.forEach(item => {
-    item.targetEmail = matchBranchEmail(item.addr, item.district, item.originIndustryType);
+    if (emailFunc) {
+      item.targetEmail = emailFunc(item.addr, item.district, item.originIndustryType);
+    }
   });
 
   filtered = result;
   renderTable();
+  
+  console.log(`[필터링 결과] 전체 ${leads.length}건 중 ${filtered.length}건 조건 합격`);
 }
 
 function renderTable(){
