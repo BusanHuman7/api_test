@@ -336,7 +336,7 @@ function renderBranchList() {
 }
 
 // 🎯 업종 우선 및 구/동 매칭 로직
-function matchBranchEmail(addr, district, originIndustryType) {
+function matchBranchEmails(addr, district, originIndustryType) {
   const fullAddr = addr || "";
   const distStr = district || "";
   const isHospitalType = ["병원", "의원", "병원,의원"].includes(originIndustryType);
