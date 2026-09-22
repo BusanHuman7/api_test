@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>병원 인허가 데이터 추출 및 진단기 (부·울·경)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS (xlsx) CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="mb-8 border-b border-slate-200 pb-5 flex justify-between items-center flex-wrap gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <i data-lucide="building-2" class="text-blue-600"></i>
+          부·울·경 병원 인허가 데이터 검색기
+        </h1>
+        <p class="text-sm text-slate-500 mt-1">
+          GitHub <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700">/data/병원.xlsx</code> 데이터 기준 | 오늘 기준 <span class="font-semibold text-blue-600">34개월~37개월 전</span> 인허가 데이터 추출
+        </p>
+      </div>
+      <div class="flex gap-2">
+        <button id="btnReloadFile" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-lg transition flex items-center gap-1">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          GitHub 데이터 다시 불러오기
+        </button>
+      </div>
+    </header>
+
+    <!-- Controls Section -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      
+      <!-- 1. 데이터 소스 상태 Card -->
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+            <i data-lucide="database" class="w-4 h-4 text-emerald-600"></i>
+            1. 데이터 소스 (GitHub /data/병원.xlsx)
+          </label>
+          <div id="fileStatusBox" class="border rounded-lg p-3 text-center bg-slate-50 transition">
+            <p id="dataStatusText" class="text-xs text-slate-500 font-medium flex items-center justify-center gap-1">
+              <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-blue-600"></i>
+              GitHub에서 데이터를 불러오는 중...
+            </p>
+          </div>
+          <!-- 백업용 수동 파일 선택 -->
+          <div class="mt-2 text-right">
+            <label for="fileInput" class="text-[11px] text-blue-600 hover:underline cursor-pointer">수동으로 로컬 파일 로드하기</label>
+            <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 지역 선택 Card -->
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+            <i data-lucide="map-pin" class="w-4 h-4 text-red-500"></i>
+            2. 대상 지역 선택
+          </label>
+          <div class="space-y-1.5 mt-2">
+            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-2 rounded border border-slate-200 hover:bg-slate-100">
+              <input type="checkbox" value="부산광역시" class="region-check rounded text-blue-600 focus:ring-blue-500 w-4 h-4" checked />
+              <span class="text-xs font-medium text-slate-700">부산광역시</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-2 rounded border border-slate-200 hover:bg-slate-100">
+              <input type="checkbox" value="경상남도" class="region-check rounded text-blue-600 focus:ring-blue-500 w-4 h-4" checked />
+              <span class="text-xs font-medium text-slate-700">경상남도</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-2 rounded border border-slate-200 hover:bg-slate-100">
+              <input type="checkbox" value="울산광역시" class="region-check rounded text-blue-600 focus:ring-blue-500 w-4 h-4" checked />
+              <span class="text-xs font-medium text-slate-700">울산광역시</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 필터 조건 및 실행 -->
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+            <i data-lucide="calendar" class="w-4 h-4 text-blue-600"></i>
+            3. 날짜 조건 (34개월 ~ 37개월 전)
+          </label>
+          <div class="bg-blue-50 border border-blue-100 p-2.5 rounded-lg text-xs text-blue-800 space-y-1">
+            <div class="flex justify-between"><span>오늘 기준:</span> <strong id="txtToday">-</strong></div>
+            <div class="flex justify-between"><span>시작일 (37개월 전):</span> <strong id="txtStart">-</strong></div>
+            <div class="flex justify-between"><span>종료일 (34개월 전):</span> <strong id="txtEnd">-</strong></div>
+          </div>
+        </div>
+        <button id="btnExtract" class="w-full mt-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2" disabled>
+          <i data-lucide="filter" class="w-4 h-4"></i>
+          데이터 추출 및 진단 실행
+        </button>
+      </div>
+
+    </div>
+
+    <!-- 파이프라인 진행 상태 -->
+    <div id="pipelineContainer" class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 hidden">
+      <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+        <i data-lucide="git-commit" class="w-4 h-4 text-slate-600"></i>
+        검색 필터링 처리 단계
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+        <div class="p-2.5 rounded-lg border bg-slate-50 border-slate-200 flex flex-col gap-1">
+          <span class="text-slate-400 font-bold">STEP 1. 파일 읽기</span>
+          <span id="step1Text" class="font-semibold text-slate-700">대기 중</span>
+        </div>
+        <div class="p-2.5 rounded-lg border bg-slate-50 border-slate-200 flex flex-col gap-1">
+          <span class="text-slate-400 font-bold">STEP 2. 헤더 매핑</span>
+          <span id="step2Text" class="font-semibold text-slate-700">대기 중</span>
+        </div>
+        <div class="p-2.5 rounded-lg border bg-slate-50 border-slate-200 flex flex-col gap-1">
+          <span class="text-slate-400 font-bold">STEP 3. 지역 조건 통과</span>
+          <span id="step3Text" class="font-semibold text-slate-700">대기 중</span>
+        </div>
+        <div class="p-2.5 rounded-lg border bg-slate-50 border-slate-200 flex flex-col gap-1">
+          <span class="text-slate-400 font-bold">STEP 4. 날짜 조건 통과</span>
+          <span id="step4Text" class="font-semibold text-slate-700">대기 중</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 진단 리포트 -->
+    <div id="diagBox" class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 hidden">
+      <h3 class="text-sm font-bold text-amber-900 flex items-center gap-1.5 mb-2">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
+        엑셀 데이터 매핑 & 진단 리포트
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-amber-900 mt-2">
+        <div class="bg-white/80 p-3 rounded-lg border border-amber-100">
+          <p class="font-bold mb-1">🔍 엑셀 컬럼(헤더) 자동 매핑 상태:</p>
+          <ul id="colMappingList" class="space-y-0.5 font-mono text-[11px]"></ul>
+        </div>
+        <div class="bg-white/80 p-3 rounded-lg border border-amber-100">
+          <p class="font-bold mb-1">📊 데이터 제외 원인 분석 (전체 <span id="totalRawCount">0</span>건 중):</p>
+          <ul id="excludeReasonList" class="space-y-0.5"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Output Section -->
+    <div id="outputContainer" class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 hidden">
+      <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            최종 추출 결과 
+            <span id="resultCount" class="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full font-bold">0건</span>
+          </h2>
+        </div>
+        <button id="btnDownload" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow transition flex items-center gap-1.5">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          엑셀로 다운로드
+        </button>
+      </div>
+
+      <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-[550px]">
+        <table class="w-full text-left text-sm text-slate-600">
+          <thead class="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-200">
+            <tr>
+              <th class="p-3 w-12 text-center font-bold">번호</th>
+              <th class="p-3 font-bold">상호</th>
+              <th class="p-3 font-bold">업종</th>
+              <th class="p-3 font-bold">지역</th>
+              <th class="p-3 font-bold">구/동</th>
+              <th class="p-3 font-bold">전화번호</th>
+              <th class="p-3 font-bold">인허가일</th>
+              <th class="p-3 font-bold text-center w-24">지도</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-100">
+            <!-- Table Rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let rawData = [];
+    let filteredData = [];
+    let startDateLimit, endDateLimit;
+
+    function formatDateStr(d) {
+      if (!(d instanceof Date) || isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function initDateLimits() {
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth() - 37, today.getDate());
+      const endDate = new Date(today.getFullYear(), today.getMonth() - 34, today.getDate());
+
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+
+      startDateLimit = startDate;
+      endDateLimit = endDate;
+
+      document.getElementById('txtToday').innerText = formatDateStr(today);
+      document.getElementById('txtStart').innerText = formatDateStr(startDate);
+      document.getElementById('txtEnd').innerText = formatDateStr(endDate);
+    }
+
+    // 순수 문자열 기반 날짜 파서 (시차 보정)
+    function parsePureStringDate(val) {
+      if (val === undefined || val === null || val === '') return { dateObj: null, strVal: '' };
+
+      let str = String(val).trim();
+
+      if (!isNaN(str) && Number(str) > 30000 && Number(str) < 60000) {
+        const jsDate = XLSX.SSF.parse_date_code(Number(str));
+        if (jsDate) {
+          const y = jsDate.y;
+          const m = jsDate.m - 1;
+          const d = jsDate.d;
+          const formattedStr = `${y}-${String(jsDate.m).padStart(2, '0')}-${String(jsDate.d).padStart(2, '0')}`;
+          return { dateObj: new Date(y, m, d), strVal: formattedStr };
+        }
+      }
+
+      const digitsOnly = str.replace(/[^\d]/g, '');
+      if (digitsOnly.length >= 8) {
+        const y = parseInt(digitsOnly.substring(0, 4), 10);
+        const m = parseInt(digitsOnly.substring(4, 6), 10) - 1;
+        const d = parseInt(digitsOnly.substring(6, 8), 10);
+        const dateObj = new Date(y, m, d);
+        const formattedStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        return { dateObj, strVal: formattedStr };
+      }
+
+      return { dateObj: null, strVal: str };
+    }
+
+    // 전화번호 자동 포맷팅
+    function formatPhoneNumber(val) {
+      if (!val) return '-';
+      
+      let str = String(val).replace(/[^\d]/g, '').trim();
+      if (!str) return '-';
+
+      if (str.length >= 9 && !str.startsWith('0')) {
+        str = '0' + str;
+      }
+
+      if (str.length === 8) {
+        return str.replace(/(\d{4})(\d{4})/, '$1-$2');
+      }
+
+      if (str.startsWith('02')) {
+        if (str.length === 9) return str.replace(/(\d{2})(\d{3})(\d{4})/, '$1-$2-$3');
+        if (str.length === 10) return str.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3');
+      }
+
+      if (str.length === 10) {
+        return str.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+      } else if (str.length === 11) {
+        return str.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+      }
+
+      return String(val);
+    }
+
+    // 구/동 및 시/군 추출 함수
+    function extractDistrictAndDong(addr) {
+      if (!addr) return '-';
+      
+      const districtMatch = addr.match(/([가-힣]+(?:시|구|군))/g);
+      const dongMatch = addr.match(/([가-힣0-9]+(?:동|읍|면))/g);
+
+      const district = districtMatch ? districtMatch[districtMatch.length - 1] : '';
+      const dong = dongMatch ? dongMatch[0] : '';
+
+      if (district || dong) {
+        return `${district} ${dong}`.trim();
+      }
+      return '-';
+    }
+
+    // 1. GitHub에서 /data/병원.xlsx 자동 불러오기
+    async function loadGitHubData() {
+      const statusBox = document.getElementById('dataStatusText');
+      statusBox.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-blue-600 inline"></i> GitHub 데이터 읽는 중...`;
+      lucide.createIcons();
+
+      try {
+        const response = await fetch('./data/병원.xlsx');
+        if (!response.ok) {
+          throw new Error(`파일을 찾을 수 없습니다 (HTTP ${response.status})`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        parseExcelBuffer(arrayBuffer, "GitHub (/data/병원.xlsx)");
+      } catch (err) {
+        console.warn("GitHub 데이터 로드 실패:", err);
+        statusBox.innerHTML = `<span class="text-amber-600 font-semibold">⚠️ /data/병원.xlsx 파일 없음</span><br><span class="text-[10px] text-slate-400">수동 로드 링크를 이용하세요.</span>`;
+      }
+    }
+
+    // 엑셀 파싱 공통 함수
+    function parseExcelBuffer(buffer, sourceName) {
+      const workbook = XLSX.read(new Uint8Array(buffer), { 
+        type: 'array', 
+        cellDates: false, 
+        raw: false, 
+        dateNF: 'yyyy-mm-dd' 
+      });
+
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      
+      rawData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+      
+      document.getElementById('btnExtract').disabled = false;
+      document.getElementById('dataStatusText').innerHTML = `<span class="text-emerald-600 font-bold">✅ 로드 완료</span> (${sourceName}, ${rawData.length}행)`;
+      document.getElementById('step1Text').innerHTML = `<span class="text-emerald-600">완료 (${rawData.length}행)</span>`;
+      document.getElementById('pipelineContainer').classList.remove('hidden');
+    }
+
+    // 수동 파일 선택 이벤트
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (evt) => parseExcelBuffer(evt.target.result, file.name);
+        reader.readAsArrayBuffer(file);
+      }
+    });
+
+    document.getElementById('btnReloadFile').addEventListener('click', () => loadGitHubData());
+
+    // 데이터 추출 및 필터링
+    btnExtract.addEventListener('click', () => {
+      const selectedRegions = Array.from(document.querySelectorAll('.region-check:checked')).map(cb => cb.value);
+
+      if (selectedRegions.length === 0) {
+        alert('최소 1개 이상의 지역을 선택해주세요.');
+        return;
+      }
+
+      const regionKeywords = [];
+      selectedRegions.forEach(reg => {
+        regionKeywords.push(reg);
+        if (reg === '부산광역시') {
+          regionKeywords.push('부산', '해운대', '부산진구', '동래', '남구', '북구', '금정', '사하', '연제', '수영', '사상', '기장', '영도', '중구', '서구', '강서구');
+        }
+        if (reg === '경상남도') {
+          regionKeywords.push('경남', '창원', '진주', '통영', '사천', '김해', '밀양', '거제', '양산', '의령', '함안', '창녕', '고성', '남해', '하동', '산청', '함양', '거창', '합천');
+        }
+        if (reg === '울산광역시') {
+          regionKeywords.push('울산', '울주');
+        }
+      });
+
+      filteredData = [];
+      let index = 1;
+
+      let matchRegionCount = 0;
+      let matchDateCount = 0;
+      let failRegionCount = 0;
+      let failDateOutOfRangeCount = 0;
+      let failDateInvalidCount = 0;
+
+      let detectedCols = { name: null, type: null, date: null, addr: null, tel: null };
+
+      const sampleRow = rawData[0] || {};
+      const actualKeys = Object.keys(sampleRow);
+
+      const findBestKey = (priorityList) => {
+        for (const target of priorityList) {
+          const found = actualKeys.find(k => k.trim() === target);
+          if (found) return found;
+        }
+        for (const target of priorityList) {
+          const found = actualKeys.find(k => {
+            const key = k.trim();
+            if (target.includes('주소') && key.includes('우편번호')) return false;
+            if (target.includes('업태') && (key.includes('일자') || key.includes('휴업'))) return false;
+            return key.includes(target);
+          });
+          if (found) return found;
+        }
+        return null;
+      };
+
+      detectedCols.name = findBestKey(['사업장명', '사업장명칭', '상호명', '상호', '사업장']);
+      detectedCols.type = findBestKey(['업태구분명', '업태구분', '업태명', '업태', '업종명', '업종']);
+      detectedCols.date = findBestKey(['인허가일자', '인허가일', '허가일자']);
+      detectedCols.addr = findBestKey(['도로명전체주소', '도로명주소', '소재지전체주소', '소재지주소', '소재지', '주소']);
+      detectedCols.tel = findBestKey(['소재지전화', '전화번호', '연락처', '사업장전화번호']);
+
+      rawData.forEach((row) => {
+        const name = detectedCols.name ? row[detectedCols.name] : '';
+        const type = detectedCols.type ? row[detectedCols.type] : '';
+        const rawDate = detectedCols.date ? row[detectedCols.date] : '';
+        const addr = detectedCols.addr ? row[detectedCols.addr] : (row['도로명전체주소'] || row['소재지전체주소'] || row['주소'] || '');
+        const rawTel = detectedCols.tel ? row[detectedCols.tel] : '';
+
+        let regionName = '';
+        if (String(addr).includes('부산')) regionName = '부산광역시';
+        else if (String(addr).includes('경남') || String(addr).includes('경상남도')) regionName = '경상남도';
+        else if (String(addr).includes('울산')) regionName = '울산광역시';
+
+        const matchRegion = regionKeywords.some(keyword => String(addr).includes(keyword));
+        if (matchRegion) {
+          matchRegionCount++;
+        } else {
+          failRegionCount++;
+        }
+
+        const { dateObj, strVal } = parsePureStringDate(rawDate);
+        let matchDate = false;
+
+        if (dateObj && !isNaN(dateObj.getTime())) {
+          if (dateObj >= startDateLimit && dateObj <= endDateLimit) {
+            matchDate = true;
+            matchDateCount++;
+          } else {
+            failDateOutOfRangeCount++;
+          }
+        } else {
+          failDateInvalidCount++;
+        }
+
+        if (matchRegion && matchDate) {
+          const districtDong = extractDistrictAndDong(addr);
+          filteredData.push({
+            '번호': index++,
+            '상호': name || '명칭없음',
+            '업종': type || '미구분',
+            '지역': regionName || '부·울·경',
+            '구/동': districtDong,
+            '전화번호': formatPhoneNumber(rawTel),
+            '인허가일': strVal,
+            '전체주소': addr
+          });
+        }
+      });
+
+      document.getElementById('step2Text').innerHTML = `<span class="text-emerald-600">완료 (컬럼 매핑 완료)</span>`;
+      document.getElementById('step3Text').innerHTML = `<span class="text-blue-600 font-bold">${matchRegionCount}건 통과</span>`;
+      document.getElementById('step4Text').innerHTML = `<span class="text-emerald-600 font-bold">${filteredData.length}건 최종 매칭</span>`;
+
+      renderDiagnostics(detectedCols, failRegionCount, failDateOutOfRangeCount, failDateInvalidCount);
+      renderTable();
+    });
+
+    function renderDiagnostics(cols, failRegion, failDateRange, failDateInvalid) {
+      const diagBox = document.getElementById('diagBox');
+      const colList = document.getElementById('colMappingList');
+      const reasonList = document.getElementById('excludeReasonList');
+
+      document.getElementById('totalRawCount').innerText = rawData.length;
+
+      colList.innerHTML = `
+        <li>• 상호(사업장명): ${cols.name ? `✅ <span class="text-emerald-700 font-bold">${cols.name}</span>` : '❌ <span class="text-red-600 font-bold">미감지</span>'}</li>
+        <li>• 업종(업태구분): ${cols.type ? `✅ <span class="text-emerald-700 font-bold">${cols.type}</span>` : '❌ <span class="text-red-600 font-bold">미감지</span>'}</li>
+        <li>• 인허가일: ${cols.date ? `✅ <span class="text-emerald-700 font-bold">${cols.date}</span>` : '❌ <span class="text-red-600 font-bold">미감지</span>'}</li>
+        <li>• 주소/소재지: ${cols.addr ? `✅ <span class="text-emerald-700 font-bold">${cols.addr}</span>` : '❌ <span class="text-red-600 font-bold">미감지</span>'}</li>
+        <li>• 전화번호: ${cols.tel ? `✅ <span class="text-emerald-700 font-bold">${cols.tel}</span>` : '⚠️ <span class="text-slate-500 font-bold">미감지 (빈값 처리)</span>'}</li>
+      `;
+
+      reasonList.innerHTML = `
+        <li class="text-red-600 font-medium">• 주소 미부합 (부산/경남/울산 없음): <strong>${failRegion}건</strong></li>
+        <li class="text-amber-700 font-medium">• 날짜 범위를 벗어남 (34~37개월 전 아님): <strong>${failDateRange}건</strong></li>
+        <li class="text-slate-500 font-medium">• 날짜 형식 이상/빈값: <strong>${failDateInvalid}건</strong></li>
+      `;
+
+      diagBox.classList.remove('hidden');
+    }
+
+    // 2. 네이버 지도 이동 함수
+    function openNaverMap(name, districtDong, fullAddr) {
+      // 상호명 + 구/동 키워드로 검색 Query 생성
+      const query = encodeURIComponent(`${districtDong} ${name}`);
+      const mapUrl = `https://map.naver.com/v5/search/${query}`;
+      window.open(mapUrl, '_blank');
+    }
+
+    function renderTable() {
+      const container = document.getElementById('outputContainer');
+      const tbody = document.getElementById('tableBody');
+      const resultCount = document.getElementById('resultCount');
+
+      tbody.innerHTML = '';
+      resultCount.innerText = `${filteredData.length}건`;
+
+      if (filteredData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">조건에 부합하는 데이터가 없습니다. 상단 [진단 리포트]를 확인하세요.</td></tr>`;
+      } else {
+        filteredData.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition border-b border-slate-100';
+          
+          // 네이버 지도 매핑 버튼 포함
+          tr.innerHTML = `
+            <td class="p-3 text-center font-medium text-slate-500">${item['번호']}</td>
+            <td class="p-3 font-semibold text-slate-800">${item['상호']}</td>
+            <td class="p-3 text-slate-600">${item['업종']}</td>
+            <td class="p-3 text-slate-600">${item['지역']}</td>
+            <td class="p-3 text-slate-600 font-medium">${item['구/동']}</td>
+            <td class="p-3 text-slate-600 font-mono text-xs">${item['전화번호']}</td>
+            <td class="p-3 text-slate-600 font-mono">${item['인허가일']}</td>
+            <td class="p-3 text-center">
+              <button onclick="openNaverMap('${item['상호']}', '${item['구/동']}', '${item['전체주소']}')" 
+                      class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 text-xs font-semibold rounded inline-flex items-center gap-1 transition">
+                <i data-lucide="map" class="w-3.5 h-3.5"></i> 지도
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+        lucide.createIcons();
+      }
+
+      container.classList.remove('hidden');
+    }
+
+    document.getElementById('btnDownload').addEventListener('click', () => {
+      if (filteredData.length === 0) return;
+
+      const exportList = filteredData.map(item => ({
+        '번호': item['번호'],
+        '상호': item['상호'],
+        '업종': item['업종'],
+        '지역': item['지역'],
+        '구/동': item['구/동'],
+        '전화번호': item['전화번호'],
+        '인허가일': item['인허가일']
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportList);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "추출목록");
+      XLSX.writeFile(workbook, `병원_추출목록_${formatDateStr(new Date())}.xlsx`);
+    });
+
+    window.onload = () => {
+      initDateLimits();
+      loadGitHubData(); // 페이지 진입 시 GitHub /data/병원.xlsx 자동 페치
+      lucide.createIcons();
+    };
+  </script>
+</body>
+</html>
