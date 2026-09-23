@@ -573,11 +573,14 @@ function extractDistrictOrCity(addr, regionName) {
     }
 
     // 네이버 지도 이동 함수
-    function openNaverMap(name, districtDong, category) {
-      const query = encodeURIComponent(`${districtDong} ${name}`);
-      const mapUrl = `https://map.naver.com/v5/search/${query}`;
-      window.open(mapUrl, '_blank');
-    }
+    function openNaverMap(address, name) {
+		// 주소가 있으면 주소로 검색, 없을 경우 상호명으로 검색
+		const searchQuery = (address && address.trim() !== '-') ? address : name;
+		const encodedQuery = encodeURIComponent(searchQuery);
+		const mapUrl = `https://map.naver.com/v5/search/${encodedQuery}`;
+	
+		window.open(mapUrl, '_blank');
+	}
 
     function renderTable(categoryNames) {
       const container = document.getElementById('outputContainer');
@@ -605,11 +608,12 @@ function extractDistrictOrCity(addr, regionName) {
             <td class="p-3 text-slate-600 font-mono text-xs">${item['전화번호']}</td>
             <td class="p-3 text-slate-600 font-mono">${item['인허가일']}</td>
             <td class="p-3 text-center">
-              <button onclick="openNaverMap('${item['상호']}', '${item['구/동']}', '${item['업종']}')" 
-                      class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 text-xs font-semibold rounded inline-flex items-center gap-1 transition">
-                <i data-lucide="map" class="w-3.5 h-3.5"></i> 지도
-              </button>
-            </td>
+              <!-- 지도 버튼 클릭 시 item['전체주소']를 넘기도록 수정 -->
+				<button onclick="openNaverMap('${item['전체주소'].replace(/'/g, "\\'")}', '${item['상호'].replace(/'/g, "\\'")}')" 
+				class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 text-xs font-semibold rounded inline-flex items-center gap-1 transition">
+				<i data-lucide="map" class="w-3.5 h-3.5"></i> 지도
+				<button>
+			</td>
           `;
           tbody.appendChild(tr);
         });
