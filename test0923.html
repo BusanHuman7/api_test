@@ -36,25 +36,49 @@
     <!-- Controls Section -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       
-      <!-- 1. 업종 선택 Card -->
+      <!-- 1. 업종 선택 Card (체크박스 형태로 수정) -->
       <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
         <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
-            <i data-lucide="briefcase" class="w-4 h-4 text-purple-600"></i>
-            1. 업종 선택 (총 7개)
-          </label>
-          <select id="categorySelect" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs font-semibold rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500">
-            <option value="병원">🏥 병원</option>
-            <option value="의원">🩺 의원</option>
-            <option value="약국">💊 약국</option>
-            <option value="일반음식점">🍽️ 일반음식점</option>
-            <option value="휴게음식점">☕ 휴게음식점</option>
-            <option value="이용업">💈 이용업</option>
-            <option value="미용업">✂️ 미용업</option>
-          </select>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+              <i data-lucide="briefcase" class="w-4 h-4 text-purple-600"></i>
+              1. 업종 선택 (총 7개)
+            </label>
+            <button id="btnToggleAllCategory" class="text-[11px] text-blue-600 hover:underline font-medium">전체해제</button>
+          </div>
+          <div class="space-y-1 mt-1 max-h-[160px] overflow-y-auto pr-1">
+            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-1.5 rounded border border-slate-200 hover:bg-slate-100">
+              <input type="checkbox" value="병원" class="category-check rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5" checked />
+              <span class="text-xs font-medium text-slate-700">🏥 병원</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-1.5 rounded border border-slate-200 hover:bg-slate-100">
+              <input type="checkbox" value="의원" class="category-check rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5" checked />
+              <span class="text-xs font-medium text-slate-700">🩺 의원</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-1.5 rounded border border-slate-200 hover:bg-slate-100">
+              <input type="checkbox" value="약국" class="category-check rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5" checked />
+              <span class="text-xs font-medium text-slate-700">💊 약국</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-1.5 rounded border border-slate-200 hover:bg-slate-100">
+              <input type="checkbox" value="일반음식점" class="category-check rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5" checked />
+              <span class="text-xs font-medium text-slate-700">🍽️ 일반음식점</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-1.5 rounded border border-slate-200 hover:bg-slate-100">
+              <input type="checkbox" value="휴게음식점" class="category-check rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5" checked />
+              <span class="text-xs font-medium text-slate-700">☕ 휴게음식점</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-1.5 rounded border border-slate-200 hover:bg-slate-100">
+              <input type="checkbox" value="이용업" class="category-check rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5" checked />
+              <span class="text-xs font-medium text-slate-700">💈 이용업</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-1.5 rounded border border-slate-200 hover:bg-slate-100">
+              <input type="checkbox" value="미용업" class="category-check rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5" checked />
+              <span class="text-xs font-medium text-slate-700">✂️ 미용업</span>
+            </label>
+          </div>
           <p id="dataStatusText" class="text-[11px] text-slate-500 font-medium mt-2 flex items-center gap-1">
             <i data-lucide="info" class="w-3.5 h-3.5 text-blue-500"></i>
-            업종 선택 시 자동으로 파일 변경
+            선택된 업종의 엑셀 자동 통합
           </p>
         </div>
         <div class="mt-2 text-right">
@@ -109,7 +133,7 @@
             <i data-lucide="play" class="w-4 h-4 text-emerald-600"></i>
             4. 검색 실행
           </label>
-          <p class="text-xs text-slate-500 mb-3">설정된 업종, 지역, 날짜 조건으로 필터링을 수행합니다.</p>
+          <p class="text-xs text-slate-500 mb-3">선택한 업종, 지역, 날짜 조건으로 일괄 추출을 수행합니다.</p>
         </div>
         <button id="btnExtract" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2" disabled>
           <i data-lucide="filter" class="w-4 h-4"></i>
@@ -168,7 +192,7 @@
       <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div>
           <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <span id="selectedCategoryBadge" class="bg-purple-100 text-purple-800 text-xs px-2.5 py-1 rounded-md font-bold">병원</span>
+            <span id="selectedCategoryBadge" class="bg-purple-100 text-purple-800 text-xs px-2.5 py-1 rounded-md font-bold">선택 업종 통합</span>
             최종 추출 결과 
             <span id="resultCount" class="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full font-bold">0건</span>
           </h2>
@@ -231,7 +255,7 @@
       document.getElementById('txtEnd').innerText = formatDateStr(endDate);
     }
 
-    // 순수 문자열 기반 날짜 파서 (시차 보정)
+    // 순수 문자열 기반 날짜 파서
     function parsePureStringDate(val) {
       if (val === undefined || val === null || val === '') return { dateObj: null, strVal: '' };
 
@@ -261,7 +285,7 @@
       return { dateObj: null, strVal: str };
     }
 
-    // 전화번호 자동 포맷팅
+    // 전화번호 포맷팅
     function formatPhoneNumber(val) {
       if (!val) return '-';
       
@@ -306,50 +330,77 @@
       return '-';
     }
 
-    // GitHub 경로에서 선택한 업종의 엑셀 파일 로드
+    // 선택된 여러 업종 체크박스에 맞춰 GitHub 데이터 비동기 병합 로드
     async function loadGitHubData() {
-      const category = document.getElementById('categorySelect').value;
+      const selectedCategories = Array.from(document.querySelectorAll('.category-check:checked')).map(cb => cb.value);
       const statusBox = document.getElementById('dataStatusText');
-      statusBox.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-blue-600 inline"></i> /data/${category}.xlsx 읽는 중...`;
+
+      if (selectedCategories.length === 0) {
+        statusBox.innerHTML = `<span class="text-red-500 font-semibold">⚠️ 업종을 1개 이상 선택하세요</span>`;
+        rawData = [];
+        document.getElementById('btnExtract').disabled = true;
+        return;
+      }
+
+      statusBox.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-blue-600 inline"></i> ${selectedCategories.length}개 파일 읽는 중...`;
       lucide.createIcons();
 
-      try {
-        const response = await fetch(`./data/${category}.xlsx`);
-        if (!response.ok) {
-          throw new Error(`파일을 찾을 수 없습니다 (HTTP ${response.status})`);
+      rawData = [];
+      let successCount = 0;
+
+      // Promise.all 로 동시 다운로드 처리
+      const fetchPromises = selectedCategories.map(async (category) => {
+        try {
+          const response = await fetch(`./data/${category}.xlsx`);
+          if (!response.ok) return null;
+          const arrayBuffer = await response.arrayBuffer();
+          
+          const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false, raw: false });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+          
+          // 각 행에 기본 지정 업종명 추가
+          json.forEach(r => r['_defaultCategory'] = category);
+          
+          successCount++;
+          return json;
+        } catch (err) {
+          console.warn(`${category}.xlsx 로드 실패:`, err);
+          return null;
         }
-        const arrayBuffer = await response.arrayBuffer();
-        parseExcelBuffer(arrayBuffer, `${category}.xlsx`);
-      } catch (err) {
-        console.warn("GitHub 데이터 로드 실패:", err);
-        statusBox.innerHTML = `<span class="text-amber-600 font-semibold">⚠️ /data/${category}.xlsx 없음</span>`;
+      });
+
+      const results = await Promise.all(fetchPromises);
+      results.forEach(items => {
+        if (items) rawData = rawData.concat(items);
+      });
+
+      if (rawData.length > 0) {
+        document.getElementById('btnExtract').disabled = false;
+        statusBox.innerHTML = `<span class="text-emerald-600 font-bold">✅ 로드 완료</span> (${successCount}개 업종, ${rawData.length}행)`;
+        document.getElementById('step1Text').innerHTML = `<span class="text-emerald-600">완료 (${rawData.length}행)</span>`;
+        document.getElementById('pipelineContainer').classList.remove('hidden');
+      } else {
         document.getElementById('btnExtract').disabled = true;
+        statusBox.innerHTML = `<span class="text-amber-600 font-semibold">⚠️ 선택한 파일 로드 실패</span>`;
       }
     }
 
-    // 엑셀 파싱 공통 함수
-    function parseExcelBuffer(buffer, sourceName) {
-      const workbook = XLSX.read(new Uint8Array(buffer), { 
-        type: 'array', 
-        cellDates: false, 
-        raw: false, 
-        dateNF: 'yyyy-mm-dd' 
-      });
-
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
+    // 업종 전체 선택/해제 토글
+    document.getElementById('btnToggleAllCategory').addEventListener('click', (e) => {
+      const checkboxes = document.querySelectorAll('.category-check');
+      const isAllChecked = Array.from(checkboxes).every(cb => cb.checked);
       
-      rawData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+      checkboxes.forEach(cb => cb.checked = !isAllChecked);
+      e.target.innerText = isAllChecked ? '전체선택' : '전체해제';
       
-      document.getElementById('btnExtract').disabled = false;
-      document.getElementById('dataStatusText').innerHTML = `<span class="text-emerald-600 font-bold">✅ 로드 완료</span> (${sourceName}, ${rawData.length}행)`;
-      document.getElementById('step1Text').innerHTML = `<span class="text-emerald-600">완료 (${rawData.length}행)</span>`;
-      document.getElementById('pipelineContainer').classList.remove('hidden');
-    }
-
-    // 업종 변경 이벤트
-    document.getElementById('categorySelect').addEventListener('change', () => {
       loadGitHubData();
+    });
+
+    // 업종 체크박스 변경 이벤트
+    document.querySelectorAll('.category-check').forEach(cb => {
+      cb.addEventListener('change', () => loadGitHubData());
     });
 
     // 수동 파일 선택 이벤트
@@ -357,16 +408,26 @@
       if (e.target.files.length) {
         const file = e.target.files[0];
         const reader = new FileReader();
-        reader.onload = (evt) => parseExcelBuffer(evt.target.result, file.name);
+        reader.onload = (evt) => {
+          const workbook = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          rawData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+          rawData.forEach(r => r['_defaultCategory'] = '수동파일');
+          
+          document.getElementById('btnExtract').disabled = false;
+          document.getElementById('dataStatusText').innerHTML = `<span class="text-emerald-600 font-bold">✅ 수동 파일 로드 완료</span> (${rawData.length}행)`;
+          document.getElementById('step1Text').innerHTML = `<span class="text-emerald-600">완료 (${rawData.length}행)</span>`;
+          document.getElementById('pipelineContainer').classList.remove('hidden');
+        };
         reader.readAsArrayBuffer(file);
       }
     });
 
     document.getElementById('btnReloadFile').addEventListener('click', () => loadGitHubData());
 
-    // 데이터 추출 및 필터링
+    // 데이터 추출 및 필터링 실행
     btnExtract.addEventListener('click', () => {
-      const selectedCategory = document.getElementById('categorySelect').value;
+      const selectedCategories = Array.from(document.querySelectorAll('.category-check:checked')).map(cb => cb.value);
       const selectedRegions = Array.from(document.querySelectorAll('.region-check:checked')).map(cb => cb.value);
 
       if (selectedRegions.length === 0) {
@@ -427,7 +488,7 @@
 
       rawData.forEach((row) => {
         const name = detectedCols.name ? row[detectedCols.name] : '';
-        const type = detectedCols.type ? row[detectedCols.type] : selectedCategory;
+        const type = detectedCols.type ? row[detectedCols.type] : row['_defaultCategory'];
         const rawDate = detectedCols.date ? row[detectedCols.date] : '';
         const addr = detectedCols.addr ? row[detectedCols.addr] : (row['도로명전체주소'] || row['소재지전체주소'] || row['주소'] || '');
         const rawTel = detectedCols.tel ? row[detectedCols.tel] : '';
@@ -463,7 +524,7 @@
           filteredData.push({
             '번호': index++,
             '상호': name || '명칭없음',
-            '업종': type || selectedCategory,
+            '업종': type || row['_defaultCategory'],
             '지역': regionName || '부·울·경',
             '구/동': districtDong,
             '전화번호': formatPhoneNumber(rawTel),
@@ -478,7 +539,7 @@
       document.getElementById('step4Text').innerHTML = `<span class="text-emerald-600 font-bold">${filteredData.length}건 최종 매칭</span>`;
 
       renderDiagnostics(detectedCols, failRegionCount, failDateOutOfRangeCount, failDateInvalidCount);
-      renderTable(selectedCategory);
+      renderTable(selectedCategories.join(', '));
     });
 
     function renderDiagnostics(cols, failRegion, failDateRange, failDateInvalid) {
@@ -512,7 +573,7 @@
       window.open(mapUrl, '_blank');
     }
 
-    function renderTable(categoryName) {
+    function renderTable(categoryNames) {
       const container = document.getElementById('outputContainer');
       const tbody = document.getElementById('tableBody');
       const resultCount = document.getElementById('resultCount');
@@ -520,7 +581,7 @@
 
       tbody.innerHTML = '';
       resultCount.innerText = `${filteredData.length}건`;
-      categoryBadge.innerText = categoryName;
+      categoryBadge.innerText = categoryNames.length > 15 ? categoryNames.substring(0, 15) + '...' : categoryNames;
 
       if (filteredData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">조건에 부합하는 데이터가 없습니다. 상단 [진단 리포트]를 확인하세요.</td></tr>`;
@@ -555,7 +616,6 @@
     document.getElementById('btnDownload').addEventListener('click', () => {
       if (filteredData.length === 0) return;
 
-      const category = document.getElementById('categorySelect').value;
       const exportList = filteredData.map(item => ({
         '번호': item['번호'],
         '상호': item['상호'],
@@ -568,8 +628,8 @@
 
       const worksheet = XLSX.utils.json_to_sheet(exportList);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "추출목록");
-      XLSX.writeFile(workbook, `${category}_추출목록_${formatDateStr(new Date())}.xlsx`);
+      XLSX.utils.book_append_sheet(workbook, worksheet, "통합추출목록");
+      XLSX.writeFile(workbook, `인허가통합목록_${formatDateStr(new Date())}.xlsx`);
     });
 
     window.onload = () => {
