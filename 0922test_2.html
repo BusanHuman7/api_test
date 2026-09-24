@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>신규 인허가 영업 자동화 – 메인(유통망 매칭 & 상권 분석)</title>
 <script src="config.js"></script>
+<!-- SheetJS 엑셀 파싱 라이브러리 -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg:#0b1220; --panel:#0f172a; --sub:#0c1426; --line:#253043;
@@ -94,7 +96,35 @@
 
 <div class="container">
   <aside class="side">
-    
+    <!-- 📊 사전 업로드 엑셀 기반 종목별 34~37개월 데이터 추출 -->
+    <div class="grp" style="background:#0d162a; padding:10px; border-radius:8px; border:1px solid var(--accent);">
+      <label style="color:var(--accent); font-weight:600; margin-top:0;">📊 엑셀 데이터 (34~37개월)</label>
+      <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">
+        추출할 지역과 종목을 선택하면 <b>34~37개월 전</b> 데이터만 수집합니다.
+      </div>
+      
+      <!-- 📍 엑셀 전용 지역 필터 -->
+      <label style="font-size:12px; margin: 6px 0 4px; color: var(--text);">지역 선택</label>
+      <div class="chkrow" id="excelRegionFilter" style="margin-bottom:8px;">
+        <label><input type="checkbox" value="부산광역시" checked> 부산</label>
+        <label><input type="checkbox" value="울산광역시" checked> 울산</label>
+        <label><input type="checkbox" value="경상남도" checked> 경남</label>
+      </div>
+
+      <!-- 🏷️ 엑셀 전용 업종 필터 -->
+      <label style="font-size:12px; margin: 6px 0 4px; color: var(--text);">업종 선택</label>
+      <div class="chkrow" id="excelIndustryFilter">
+        <label><input type="checkbox" value="일반음식점" checked> 일반음식점</label>
+        <label><input type="checkbox" value="휴게음식점" checked> 휴게음식점</label>
+        <label><input type="checkbox" value="이용업" checked> 이용업</label>
+        <label><input type="checkbox" value="미용업" checked> 미용업</label>
+        <label><input type="checkbox" value="약국" checked> 약국</label>
+        <label><input type="checkbox" value="병원" checked> 병원</label>
+        <label><input type="checkbox" value="의원" checked> 의원</label>
+      </div>
+      <button class="btn btn-secondary" id="extractExcelBtn" style="margin-top:10px; background:#0284c7;">📥 선택 조건 34~37개월 데이터 추출</button>
+    </div>
+	
 
     <!-- 담당 유통망(대리점) 매핑 설정 UI -->
     <div class="grp" style="background:#0d162a; padding:10px; border-radius:8px; border:1px solid var(--line);">
