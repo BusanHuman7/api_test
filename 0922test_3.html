@@ -530,6 +530,11 @@ async function loadAndExtractExcelData() {
   });
 
   leads = extractedLeads;
+  
+  // 💡 [핵심 수정] 34~37개월 데이터 추출 시 사이드바 날짜 입력란을 해당 범위로 자동 업데이트
+  qs("#fromDate").value = startDateLimit.toISOString().slice(0, 10);
+  qs("#toDate").value = endDateLimit.toISOString().slice(0, 10);
+  
   applyFilters();
 
   // 📋 진단 리포트 알림창 출력
@@ -780,39 +785,40 @@ function applyFilters() {
   const toClean = getCleanDateString(qs("#toDate").value);
 
   result = result.filter(item => {
-    const matchReg = selectedRegions.some(reg => {
+    // 1. 지역 조건 검사
+    const matchReg = selectedRegions.length === 0 || selectedRegions.some(reg => {
       const fullText = (item.region + " " + item.addr).toLowerCase();
-      if (reg.includes("경남") || reg.includes("경상남도")) {
-        return fullText.includes("경남") || fullText.includes("경상남도");
-      }
+      if (reg.includes("경남") || reg.includes("경상남도")) return fullText.includes("경남") || fullText.includes("경상남도");
       if (reg.includes("부산")) return fullText.includes("부산");
       if (reg.includes("울산")) return fullText.includes("울산");
       return fullText.includes(reg.toLowerCase());
     });
 
-    const matchInd = selectedInds.includes(item.originIndustryType);
+    // 2. 업종 조건 검사 (유연하게 부분 일치 허용)
+    const matchInd = selectedInds.length === 0 || selectedInds.some(ind => 
+      item.originIndustryType.includes(ind) || item.industry.includes(ind)
+    );
 
+    // 3. 검색어 검사
     const matchKw = !keyword || 
       item.name.toLowerCase().includes(keyword) || 
       item.addr.toLowerCase().includes(keyword) || 
       item.telno.toLowerCase().includes(keyword) || 
-      item.mobile.toLowerCase().includes(keyword) || 
       item.district.toLowerCase().includes(keyword);
 
+    // 4. 날짜 조건 검사 (형식이 맞는 경우만 범위 적용)
     let matchDate = true;
     const itemDateClean = getCleanDateString(item.permit_date);
     
-    if (fromClean && toClean) {
-      if (itemDateClean.length === 8) {
-        matchDate = (itemDateClean >= fromClean && itemDateClean <= toClean);
-      }
+    if (fromClean && toClean && itemDateClean.length === 8) {
+      matchDate = (itemDateClean >= fromClean && itemDateClean <= toClean);
     }
 
     return matchReg && matchInd && matchKw && matchDate;
   });
 
-  const emailFunc = (typeof matchBranchEmails === 'function') ? matchBranchEmails : (typeof matchBranchEmail === 'function' ? matchBranchEmail : null);
-  
+  // 유통망 이메일 매칭
+  const emailFunc = (typeof matchBranchEmails === 'function') ? matchBranchEmails : null;
   result.forEach(item => {
     if (emailFunc) {
       item.targetEmail = emailFunc(item.addr, item.district, item.originIndustryType);
@@ -820,7 +826,7 @@ function applyFilters() {
   });
 
   filtered = result;
-  renderTable();
+  renderTable(); // 리스트 재출력
 }
 
 function renderTable(){
