@@ -382,6 +382,7 @@ function parsePureStringDate(val) {
 }
 
 // 📊 test0923_1.html의 34~37개월 엑셀 추출 기능 연동
+// 📊 34~37개월 엑셀 추출 기능 (원인 분석 진단 리포트 추가)
 async function loadAndExtractExcelData() {
   const selectedCategories = Array.from(document.querySelectorAll('#excelIndustryFilter input:checked')).map(cb => cb.value);
   const selectedRegions = Array.from(document.querySelectorAll('#excelRegionFilter input:checked')).map(cb => cb.value);
@@ -398,7 +399,7 @@ async function loadAndExtractExcelData() {
   const tb = qs("#leadTable tbody");
   tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px;"><span class="spinner"></span> 34~37개월 전 데이터를 엑셀에서 추출 중입니다...</td></tr>`;
 
-  // 34~37개월 범위 생성
+  // 34~37개월 범위 계산 (현재 기준)
   const today = new Date();
   const startDateLimit = new Date(today.getFullYear(), today.getMonth() - 37, today.getDate());
   const endDateLimit = new Date(today.getFullYear(), today.getMonth() - 34, today.getDate());
@@ -429,7 +430,7 @@ async function loadAndExtractExcelData() {
   });
 
   if (excelRawData.length === 0) {
-    alert('선택한 엑셀 파일 데이터를 로드할 수 없습니다.');
+    alert('선택한 엑셀 파일 데이터를 로드할 수 없습니다. ./data/ 경로에 엑셀 파일이 있는지 확인해주세요.');
     renderTable();
     return;
   }
@@ -472,6 +473,12 @@ async function loadAndExtractExcelData() {
 
   let extractedLeads = [];
 
+  // 진단용 카운터 변수
+  let totalCount = excelRawData.length;
+  let skipRegion = 0;
+  let skipDateRange = 0;
+  let skipDateInvalid = 0;
+
   excelRawData.forEach((row, idx) => {
     const name = detectedCols.name ? row[detectedCols.name] : '';
     const type = detectedCols.type ? row[detectedCols.type] : row['_defaultCategory'];
@@ -486,37 +493,56 @@ async function loadAndExtractExcelData() {
 
     const matchRegion = regionKeywords.some(keyword => String(addr).includes(keyword));
     const { dateObj, strVal } = parsePureStringDate(rawDate);
-    
-    let matchDate = false;
-    if (dateObj && !isNaN(dateObj.getTime())) {
-      if (dateObj >= startDateLimit && dateObj <= endDateLimit) {
-        matchDate = true;
-      }
+
+    if (!matchRegion) {
+      skipRegion++;
+      return;
     }
 
-    if (matchRegion && matchDate) {
-      const districtOrCity = extractDistrictOrCity(addr, regionName);
-      extractedLeads.push({
-        id: `excel_${idx}_${Date.now()}`,
-        name: name || '명칭없음',
-        industry: type || row['_defaultCategory'],
-        originIndustryType: row['_defaultCategory'],
-        region: regionName || '부·울·경',
-        district: districtOrCity,
-        addr: addr,
-        telno: formatPhoneNumber(rawTel),
-        mobile: '정보없음',
-        targetEmail: '',
-        permit_date: strVal,
-        lat: null,
-        lng: null,
-        aiScript: ''
-      });
+    if (!dateObj || isNaN(dateObj.getTime())) {
+      skipDateInvalid++;
+      return;
     }
+
+    if (dateObj < startDateLimit || dateObj > endDateLimit) {
+      skipDateRange++;
+      return;
+    }
+
+    // 모든 조건을 통과한 리드 데이터
+    const districtOrCity = extractDistrictOrCity(addr, regionName);
+    extractedLeads.push({
+      id: `excel_${idx}_${Date.now()}`,
+      name: name || '명칭없음',
+      industry: type || row['_defaultCategory'],
+      originIndustryType: row['_defaultCategory'],
+      region: regionName || '부·울·경',
+      district: districtOrCity,
+      addr: addr,
+      telno: formatPhoneNumber(rawTel),
+      mobile: '정보없음',
+      targetEmail: '',
+      permit_date: strVal,
+      lat: null,
+      lng: null,
+      aiScript: ''
+    });
   });
 
   leads = extractedLeads;
   applyFilters();
+
+  // 📋 진단 리포트 알림창 출력
+  const reportMsg = `📊 엑셀 데이터 분석 진단 리포트\n\n` +
+    `• 읽어온 총 데이터: ${totalCount}건\n` +
+    `• 추출 성공: ${extractedLeads.length}건\n\n` +
+    `[데이터 제외 원인 분석]\n` +
+    `• 주소 미부합 (부산/경남/울산 없음): ${skipRegion}건\n` +
+    `• 날짜 범위를 벗어남 (34~37개월 전 아님): ${skipDateRange}건\n` +
+    `• 날짜 형식 이상/빈값: ${skipDateInvalid}건\n\n` +
+    `기준 날짜 범위: ${startDateLimit.toISOString().slice(0,10)} ~ ${endDateLimit.toISOString().slice(0,10)}`;
+
+  alert(reportMsg);
 }
 
 // 업종 조건 저장을 위해 배열/객체 구조로 변경
