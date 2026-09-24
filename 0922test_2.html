@@ -172,7 +172,7 @@
         <label><input type="checkbox" value="약국" checked> 약국</label>
         <label><input type="checkbox" value="병원" checked> 병원</label>
         <label><input type="checkbox" value="의원" checked> 의원</label>
-       <div>
+       </div>
     </div>
 
     <div class="grp">
@@ -306,6 +306,7 @@
   </div>
 </div>
 
+<script>
 let leads = []; 
 let filtered = []; 
 let selectedId = null;
@@ -813,7 +814,6 @@ function downloadExcel() {
       `"${item.telno}"`,
       `"${item.permit_date}"`,
       `"${item.addr.replace(/"/g, '""')}"`,
-<!--      `"${item.targetEmail}"`,	-->
       `"${cleanScript}"`
     ];
     csvContent += row.join(",") + "\n";
