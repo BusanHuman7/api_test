@@ -502,7 +502,7 @@ async function fetchPublicData() {
   const ltClean = endDateObj.toISOString().slice(0, 10).replace(/-/g, "");
 
   const tb = qs("#leadTable tbody");
-  tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px;"><span class="spinner"></span> 지정한 조건으로 GAS 백엔드에서 데이터를 수집 중입니다...</td></tr>`;
+  tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px;"><span class="spinner"></span> 공공데이터포털에서 데이터를 수집 중입니다...</td></tr>`;
 
   let allFetchedData = [];
 
