@@ -163,7 +163,7 @@
       </div>
     </div>
 
-	<!-- 지역/업종 필터 -->
+	    <!-- 지역/업종 필터 -->
     <div class="grp">
       <label>지역</label>
       <div class="chkrow" id="regionFilter">
@@ -896,6 +896,10 @@ qs("#aiMarketBtn").addEventListener("click", async () => {
 qs("#modalCloseBtn").addEventListener("click", () => marketModal.style.display = "none");
 marketModal.addEventListener("click", (e) => { if (e.target === marketModal) marketModal.style.display = "none"; });
 
+
+const batchBtn = qs("#batchScriptBtn");
+if (batchBtn)	{
+batchBtn.addEventListener("click", async () => {
 qs("#batchScriptBtn").addEventListener("click", async () => {
   if (filtered.length === 0) { alert("조회된 데이터가 없습니다."); return; }
 
@@ -921,6 +925,7 @@ qs("#batchScriptBtn").addEventListener("click", async () => {
   }
   scriptBox.textContent = `✅ 총 ${filtered.length}건의 영업 스크립트 생성이 완료되었습니다!`;
 });
+}
 
 function downloadExcel() {
   if (filtered.length === 0) { alert("다운로드할 데이터가 없습니다."); return; }
