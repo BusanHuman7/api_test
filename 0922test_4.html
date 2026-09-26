@@ -888,18 +888,26 @@ const modalTitle = qs("#modalTitle");
 qs("#aiMarketBtn").addEventListener("click", async () => {
   if (!currentSelectedItem) { alert("대상을 먼저 선택해 주세요."); return; }
   modalTitle.textContent = `📍 [${currentSelectedItem.name}] 상권 분석 심층 리포트`;
-  modalBody.innerHTML = `<span class="spinner"></span> 실시간 상권 분석 리포트 작성 중...`;
+  modalBody.innerHTML = `<span class="spinner"></span> 실시간 상권 분석 리포트 작성 중... (10~15초 소요)`;
   marketModal.style.display = "flex";
 
   try {
     const res = await callGasBackend("analyzeMarket", { item: currentSelectedItem });
+    
     if (res.status === "success") {
       modalBody.textContent = res.report;
     } else {
-      modalBody.textContent = `❌ 상권 분석 실패: ${res.message}`;
+      // 💡 백엔드에서 넘어온 상세 에러 메시지 출력
+      modalBody.innerHTML = `<div style="color:var(--danger); font-weight:bold; line-height:1.8;">
+        ❌ 상권 분석 실패<br>
+        상세 원인: ${res.message || '응답 메시지가 없습니다.'}
+      </div>`;
     }
   } catch (e) {
-    modalBody.textContent = `❌ 상권 분석 실패: ${e.message}`;
+    modalBody.innerHTML = `<div style="color:var(--danger); font-weight:bold; line-height:1.8;">
+      ❌ 통신/서버 오류 발생<br>
+      상세 원인: ${e.message}
+    </div>`;
   }
 });
 
