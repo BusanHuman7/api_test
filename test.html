@@ -860,13 +860,17 @@ qs("#aiGenerateBtn").addEventListener("click", async () => {
 
   try {
     const res = await callGasBackend("generateScript", { item: currentSelectedItem });
-    if (res.status === "success") {
+    console.log("백엔드 응답 결과:", res); // 👈 콘솔에서 res 객체 구조 확인
+	  
+    if (res && res.status === "success") {
       currentSelectedItem.aiScript = res.script;
       scriptBox.textContent = res.script;
     } else {
+	  const errMsg = (res && res.message) ? res.message : "알 수 없는 응답 오류";
       scriptBox.textContent = `❌ 생성 실패1: ${res.message}`;
     }
   } catch (e) {
+	console.error("catch로 들어온 에러:", e); // 👈 catch 발생 시 원래 에러 객체 확인
     scriptBox.textContent = `❌ 생성 실패2: ${e.message}`;
   }
 });
