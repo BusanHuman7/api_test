@@ -887,13 +887,13 @@ qs("#aiMarketBtn").addEventListener("click", async () => {
 
   try {
     const res = await callGasBackend("analyzeMarket", { item: currentSelectedItem });
-    if (res.status === "success") {
+    if (res.status === "success" && res.report) {
       modalBody.textContent = res.report;
     } else {
-      modalBody.textContent = `❌ 상권 분석 실패: ${res.message}`;
+      modalBody.textContent = `❌ 상권 분석 실패1: ${res.message}`;
     }
   } catch (e) {
-    modalBody.textContent = `❌ 상권 분석 실패: ${e.message}`;
+    modalBody.textContent = `❌ 상권 분석 실패2: ${e.message}`;
   }
 });
 
