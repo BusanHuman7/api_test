@@ -864,10 +864,10 @@ qs("#aiGenerateBtn").addEventListener("click", async () => {
       currentSelectedItem.aiScript = res.script;
       scriptBox.textContent = res.script;
     } else {
-      scriptBox.textContent = `❌ 생성 실패: ${res.message}`;
+      scriptBox.textContent = `❌ 생성 실패1: ${res.message}`;
     }
   } catch (e) {
-    scriptBox.textContent = `❌ 생성 실패: ${e.message}`;
+    scriptBox.textContent = `❌ 생성 실패2: ${e.message}`;
   }
 });
 
