@@ -1,6 +1,6 @@
 // config.js
 const CONFIG = {
-  BACKEND_URL: "https://script.google.com/macros/s/AKfycbygQw4L-bHh21g5-W4oYTqfD8Hu7MqGtnRUolzMzJ0ovKrd7s4bU0sTIJGCadg9wh_u8w/exec"                
+  BACKEND_URL: "https://script.google.com/macros/s/AKfycbwodZDg8CzNAdXId6ycejcDy9pcNXHrjl07XEW3-DDPIN-cKcw-ibawTf5_5JI6Gi9G8g/exec"                
 };
 
 Object.freeze(CONFIG);
