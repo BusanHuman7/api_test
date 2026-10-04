@@ -710,14 +710,14 @@ const fromClean = rawFrom.replace(/-/g, "");
       // 지역 코드가 지정된 경우 시군구별로 조회, 없으면 전체 조회
       const targets = regionCodes.length > 0 ? regionCodes : [null];
 
-      for (const code of targets) {
+      for (const targetCode of targets) {
         let pageNo = 1;
         let maxPages = 10;
 
         while (pageNo <= maxPages) {
           const res = await callGasBackend("fetchPublicData", {
             category: indName,
-            regionCode: code, // 👈 개방자치단체코드 전달
+            regionCode: targetCode, // 👈 개방자치단체코드 전달
             fromDate: fromClean,
             ltDate: ltClean,
             pageNo: pageNo
