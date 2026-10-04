@@ -697,8 +697,10 @@ async function fetchPublicData() {
     return;
   }
 
-const fromClean = rawFrom.replace(/-/g, "");
-  const ltClean = getNextDayYmd(rawTo);
+  const fromClean = rawFrom.replace(/-/g, "");
+  const endDateObj = new Date(rawTo);
+  endDateObj.setDate(endDateObj.getDate() + 1);
+  const ltClean = endDateObj.toISOString().slice(0, 10).replace(/-/g, "");
 
   showLoading(true, "공공데이터 API 호출 및 데이터 수집 중...");
 
@@ -739,7 +741,7 @@ const fromClean = rawFrom.replace(/-/g, "");
           pageNo++;
         }
       }
-	}
+    }
 
     // 📍 기존 화면 테이블 및 통계 업데이트 함수 실행
     if (typeof applyFilters === 'function') {
@@ -756,6 +758,7 @@ const fromClean = rawFrom.replace(/-/g, "");
   } finally {
     showLoading(false);
   }
+}
 
 
 //  const fromClean = rawFrom.replace(/-/g, "");
