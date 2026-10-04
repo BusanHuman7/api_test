@@ -89,7 +89,6 @@
   .btn-map { background: #059669; color: #fff; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
   .btn-map:hover { background: #10b981; }
 
-  /* 💡 엑셀 전용 날짜 표시 안내 스타일 */
   .excel-date-banner {
     background: #0284c7; color: #ffffff; padding: 8px 12px; border-radius: 6px;
     font-size: 12px; font-weight: 600; margin-bottom: 10px; display: none;
@@ -107,14 +106,12 @@
 
 <div class="container">
   <aside class="side">
-    <!-- 📊 사전 업로드 엑셀 기반 종목별 34~37개월 데이터 추출 -->
     <div class="grp" style="background:#0d162a; padding:10px; border-radius:8px; border:1px solid var(--accent);">
       <label style="color:var(--accent); font-weight:600; margin-top:0;">📊 엑셀 데이터 (34~37개월)</label>
       <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">
         추출할 지역과 종목을 선택하면 <b>34~37개월 전</b> 데이터만 수집합니다.
       </div>
       
-      <!-- 📍 엑셀 전용 지역 필터 -->
       <label style="font-size:12px; margin: 6px 0 4px; color: var(--text);">지역 선택</label>
       <div class="chkrow" id="excelRegionFilter" style="margin-bottom:8px;">
         <label><input type="checkbox" value="부산광역시" checked> 부산</label>
@@ -122,7 +119,6 @@
         <label><input type="checkbox" value="경상남도" checked> 경남</label>
       </div>
 
-      <!-- 🏷️ 엑셀 전용 업종 필터 -->
       <label style="font-size:12px; margin: 6px 0 4px; color: var(--text);">업종 선택</label>
       <div class="chkrow" id="excelIndustryFilter">
         <label><input type="checkbox" value="일반음식점" checked> 일반음식점</label>
@@ -136,7 +132,6 @@
       <button class="btn btn-secondary" id="extractExcelBtn" style="margin-top:10px; background:#0284c7;">📥 34~37개월 데이터 추출</button>
     </div>
 
-    <!-- 담당 유통망(대리점) 매핑 설정 UI -->
     <div class="grp" style="background:#0d162a; padding:10px; border-radius:8px; border:1px solid var(--line);">
       <label style="color:var(--ok); font-weight:600; margin-top:0;">🏢 담당 유통망(대리점) 매핑 설정</label>
       
@@ -158,11 +153,9 @@
       <button class="btn btn-secondary" id="addBranchBtn" type="button" style="padding:6px; font-size:12px; margin-top:0;">+ 유통망 매핑 추가</button>
       
       <div id="branchList" style="margin-top:10px; max-height:130px; overflow-y:auto;">
-        <!-- 매핑 목록 동적 추가 -->
       </div>
     </div>
 
-    <!-- 지역/업종 필터 -->
     <div class="grp">
       <label>지역</label>
       <div class="chkrow" id="regionFilter">
@@ -249,7 +242,6 @@
       <div class="card detail">
         <div class="hd">상세 정보 및 AI 분석</div>
         <div class="bd">
-          <!-- 💡 엑셀 34~37개월 추출 시만 노출되는 날짜 조건 안내 배너 -->
           <div id="excelDateNotice" class="excel-date-banner">
             📅 34~37개월 전 추출 범위: <span id="excelDateText">-</span>
           </div>
@@ -279,7 +271,6 @@
   </div>
 </div>
 
-<!-- AI 상권 분석 결과 모달 팝업 -->
 <div class="modal-overlay" id="marketModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -292,7 +283,6 @@
   </div>
 </div>
 
-<!-- 유통망별 메일 발송 미리보기 모달 팝업 -->
 <div class="modal-overlay" id="mailModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -388,7 +378,6 @@ function parsePureStringDate(val) {
   return { dateObj: null, strVal: str };
 }
 
-// 📊 엑셀 기반 34~37개월 데이터 추출
 async function loadAndExtractExcelData() {
   const selectedCategories = Array.from(document.querySelectorAll('#excelIndustryFilter input:checked')).map(cb => cb.value);
   const selectedRegions = Array.from(document.querySelectorAll('#excelRegionFilter input:checked')).map(cb => cb.value);
@@ -399,7 +388,6 @@ async function loadAndExtractExcelData() {
   const tb = qs("#leadTable tbody");
   tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px;"><span class="spinner"></span> 34~37개월 전 데이터를 엑셀에서 추출 중입니다...</td></tr>`;
 
-  // 34~37개월 범위 계산
   const today = new Date();
   const startDateLimit = new Date(today.getFullYear(), today.getMonth() - 37, today.getDate());
   const endDateLimit = new Date(today.getFullYear(), today.getMonth() - 34, today.getDate());
@@ -538,7 +526,6 @@ async function loadAndExtractExcelData() {
 
   leads = extractedLeads;
 
-  // 💡 [추가] 우측 상세정보 상단 날짜 출력
   const noticeBox = qs("#excelDateNotice");
   const noticeText = qs("#excelDateText");
   if (noticeBox && noticeText) {
@@ -666,7 +653,6 @@ qs("#addBranchBtn").addEventListener("click", (e) => {
   applyFilters();
 });
 
-// 📍 시/도별 개방자치단체코드(5자리) 매핑
 const REGION_CODE_MAP = {
   '부산광역시': ['3250000','3260000','3270000','3280000','3290000','3300000','3310000','3320000','3330000','3340000','3350000','3360000','3370000','3380000','3390000','3400000'],
   '울산광역시': ['3690000','3700000','3710000','3720000','3730000'],
@@ -674,14 +660,12 @@ const REGION_CODE_MAP = {
 };
 
 async function fetchPublicData() {
-  // 💡 API 호출 시에는 엑셀 날짜 안내 안함
   const noticeBox = qs("#excelDateNotice");
   if (noticeBox) noticeBox.style.display = "none";
 
   const selectedInds = qsa("#industryFilter input:checked").map(x => x.value);
   const selectedRegions = qsa("#regionFilter input:checked").map(x => x.value);
 
-// 📍 선택한 지역들의 개방자치단체코드를 하나의 배열로 통합
   let regionCodes = [];
   selectedRegions.forEach(reg => {
     if (REGION_CODE_MAP[reg]) {
@@ -702,7 +686,7 @@ async function fetchPublicData() {
   endDateObj.setDate(endDateObj.getDate() + 1);
   const ltClean = endDateObj.toISOString().slice(0, 10).replace(/-/g, "");
 
-const tb = qs("#leadTable tbody");
+  const tb = qs("#leadTable tbody");
   tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px;"><span class="spinner"></span> 공공데이터포털에서 데이터를 수집 중입니다...</td></tr>`;
 
   let allFetchedData = [];
@@ -770,10 +754,6 @@ const tb = qs("#leadTable tbody");
   }
 }
 
-  leads = allFetchedData;
-  applyFilters();
-}
-
 function getCleanDateString(raw) {
   if (!raw) return "";
   const digits = String(raw).replace(/[^0-9]/g, "");
@@ -818,7 +798,6 @@ function applyFilters() {
       item.telno.toLowerCase().includes(keyword) || 
       item.district.toLowerCase().includes(keyword);
 
-    // 💡 엑셀에서 추출한 데이터(id가 excel_로 시작)는 사이드바 날짜 조건 검사를 건너뜁니다.
     let matchDate = true;
     const isExcelData = item.id && item.id.startsWith("excel_");
 
@@ -907,7 +886,7 @@ qs("#aiGenerateBtn").addEventListener("click", async () => {
 
   try {
     const res = await callGasBackend("generateScript", { item: currentSelectedItem });
-    console.log("백엔드 응답 결과:", res); // 👈 콘솔에서 res 객체 구조 확인
+    console.log("백엔드 응답 결과:", res);
 	  
     if (res && res.status === "success") {
       currentSelectedItem.aiScript = res.script;
@@ -917,7 +896,7 @@ qs("#aiGenerateBtn").addEventListener("click", async () => {
       scriptBox.textContent = `❌ 생성 실패1: ${res.message}`;
     }
   } catch (e) {
-	console.error("catch로 들어온 에러:", e); // 👈 catch 발생 시 원래 에러 객체 확인
+	console.error("catch로 들어온 에러:", e);
     scriptBox.textContent = `❌ 생성 실패2: ${e.message}`;
   }
 });
@@ -1072,30 +1051,24 @@ qs("#apiFetchBtn").addEventListener("click", fetchPublicData);
 qs("#extractExcelBtn").addEventListener("click", loadAndExtractExcelData);
 qs("#downloadExcelBtn").addEventListener("click", downloadExcel);
 qs("#resetFilterBtn").addEventListener("click", () => {
-  // 1. 데이터 전체 비우기 및 선택 상태 초기화
   leads = [];
   filtered = [];
   selectedId = null;
   currentSelectedItem = null;
 
-  // 2. 지역 및 업종 체크박스 전체 선택으로 복구
   qsa("#regionFilter input").forEach(x => x.checked = true);
   qsa("#industryFilter input").forEach(x => x.checked = true);
 
-  // 3. 인허가일 날짜 기본값(최근 7일) 설정
   initDates();
 
-  // 4. 검색창 초기화
   qs("#searchBox").value = "";
 
-  // 5. 우측 엑셀 안내 배너 숨기기 및 상세 정보 창 초기화
   const noticeBox = qs("#excelDateNotice");
   if (noticeBox) noticeBox.style.display = "none";
 
   qs("#detailInfo").style.display = "block";
   qs("#detailPane").style.display = "none";
 
-  // 6. 테이블 리스트 안내 문구 상태로 다시 출력
   renderTable();
 });
 
