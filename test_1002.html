@@ -697,68 +697,134 @@ async function fetchPublicData() {
     return;
   }
 
-  const fromClean = rawFrom.replace(/-/g, "");
-  const endDateObj = new Date(rawTo);
-  endDateObj.setDate(endDateObj.getDate() + 1);
-  const ltClean = endDateObj.toISOString().slice(0, 10).replace(/-/g, "");
+const fromClean = rawFrom.replace(/-/g, "");
+  const ltClean = getNextDayYmd(rawTo);
 
-  const tb = qs("#leadTable tbody");
-  tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px;"><span class="spinner"></span> 공공데이터포털에서 데이터를 수집 중입니다...</td></tr>`;
+  showLoading(true, "공공데이터 API 호출 및 데이터 수집 중...");
 
-  let allFetchedData = [];
+  try {
+    // 기존 데이터 유지 또는 초기화 선택 (기존 동작과 동일)
+    let fetchedTotal = 0;
 
-  for (const indName of selectedInds) {
-    let pageNo = 1;
-    let maxPages = 10;
+    for (const indName of selectedInds) {
+      // 지역 코드가 지정된 경우 시군구별로 조회, 없으면 전체 조회
+      const targets = regionCodes.length > 0 ? regionCodes : [null];
 
-    while (pageNo <= maxPages) {
-      try {
-        const res = await callGasBackend("fetchPublicData", {
-          category: indName,
-	  regionCode: code, // 👈 개방자치단체코드 1개씩 전달
-          fromDate: fromClean,
-          ltDate: ltClean,
-          pageNo: pageNo
-        });
+      for (const code of targets) {
+        let pageNo = 1;
+        let maxPages = 10;
 
-        if (res.status !== "success") break;
-
-        let rawItems = res.data?.response?.body?.items?.item;
-        let rows = Array.isArray(rawItems) ? rawItems : (rawItems ? [rawItems] : []);
-
-        if (rows.length === 0) break;
-
-        rows.forEach((item, index) => {
-          const rawAddr = item.ROAD_NM_ADDR || item.LOTNO_ADDR || item.SITE_ADDR || "";
-          const tokens = rawAddr.trim().split(/\s+/);
-          const district = tokens[1] || "-";
-
-          allFetchedData.push({
-            id: `${indName}_p${pageNo}_${index}_${item.MNG_NO || index}`,
-            name: item.BPLC_NM || item.NAME || "상호미표시",
-            industry: `${item.BZSTAT_SE_NM || '미분류'} (${indName})`,
-            originIndustryType: indName,
-            region: tokens[0] || "기타지역",
-            district: district,
-            addr: rawAddr,
-            telno: item.TELNO || item.SITE_TEL || item.LOCAL_TELNO || item.TEL || "-",
-            mobile: item.HP || item.MOBILE || "-",
-            targetEmail: "",
-            permit_date: parsePermitDate(item),
-            lat: item.Y || item.LAT || null,
-            lng: item.X || item.LNG || null,
-            aiScript: ""
+        while (pageNo <= maxPages) {
+          const res = await callGasBackend("fetchPublicData", {
+            category: indName,
+            regionCode: code, // 👈 개방자치단체코드 전달
+            fromDate: fromClean,
+            ltDate: ltClean,
+            pageNo: pageNo
           });
-        });
 
-        if (rows.length < 100) break;
-        pageNo++;
-      } catch (err) {
-        console.error(`${indName} 수집 오류:`, err);
-        break;
+          if (res.status !== "success" || !res.data) {
+            console.warn(`[${indName}] ${pageNo}페이지 호출 실패 또는 데이터 없음:`, res.message);
+            break;
+          }
+
+          const items = extractItemsFromPublicRes(res.data);
+          if (!items || items.length === 0) break;
+
+          // 📍 기존 HTML 내 데이터 가공 및 테이블 렌더링 함수 그대로 호출
+          processAndAppendApiItems(items, indName);
+          fetchedTotal += items.length;
+
+          if (items.length < 100) break; // 마지막 페이지 달성 시 다음 시군구로 이동
+          pageNo++;
+        }
       }
     }
+
+    // 📍 기존 화면 테이블 및 통계 업데이트 함수 실행
+    if (typeof applyFilters === 'function') {
+      applyFilters(); // 기존 화면 필터링 적용
+    } else if (typeof renderTable === 'function') {
+      renderTable();  // 기존 테이블 렌더링 적용
+    }
+
+    alert(`총 ${fetchedTotal}건의 API 데이터 조회가 완료되었습니다.`);
+
+  } catch (err) {
+    console.error("API 데이터 호출 오류:", err);
+    alert("데이터 호출 중 오류가 발생했습니다: " + err.message);
+  } finally {
+    showLoading(false);
   }
+}
+
+
+//  const fromClean = rawFrom.replace(/-/g, "");
+//  const endDateObj = new Date(rawTo);
+//  endDateObj.setDate(endDateObj.getDate() + 1);
+//  const ltClean = endDateObj.toISOString().slice(0, 10).replace(/-/g, "");
+
+//  showLoading(true, "공공데이터 API 호출 중...");
+
+//  const tb = qs("#leadTable tbody");
+//  tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px;"><span class="spinner"></span> 공공데이터포털에서 데이터를 수집 중입니다...</td></tr>`;
+
+//  let allFetchedData = [];
+
+//trt {
+
+//  for (const indName of selectedInds) {
+//   let pageNo = 1;
+//    let maxPages = 10;
+
+//    while (pageNo <= maxPages) {
+//      try {
+//        const res = await callGasBackend("fetchPublicData", {
+//          category: indName,
+//	  regionCode: code, // 👈 개방자치단체코드 1개씩 전달
+//          fromDate: fromClean,
+//          ltDate: ltClean,
+//          pageNo: pageNo
+//        });
+
+//        if (res.status !== "success") break;
+
+//        let rawItems = res.data?.response?.body?.items?.item;
+//        let rows = Array.isArray(rawItems) ? rawItems : (rawItems ? [rawItems] : []);
+
+//        if (rows.length === 0) break;
+
+//        rows.forEach((item, index) => {
+//          const rawAddr = item.ROAD_NM_ADDR || item.LOTNO_ADDR || item.SITE_ADDR || "";
+//          const tokens = rawAddr.trim().split(/\s+/);
+//          const district = tokens[1] || "-";
+
+//          allFetchedData.push({
+//            id: `${indName}_p${pageNo}_${index}_${item.MNG_NO || index}`,
+//            name: item.BPLC_NM || item.NAME || "상호미표시",
+//            industry: `${item.BZSTAT_SE_NM || '미분류'} (${indName})`,
+//            originIndustryType: indName,
+//            region: tokens[0] || "기타지역",
+//            district: district,
+//            addr: rawAddr,
+//            telno: item.TELNO || item.SITE_TEL || item.LOCAL_TELNO || item.TEL || "-",
+//            mobile: item.HP || item.MOBILE || "-",
+//            targetEmail: "",
+//            permit_date: parsePermitDate(item),
+//            lat: item.Y || item.LAT || null,
+//            lng: item.X || item.LNG || null,
+//            aiScript: ""
+//          });
+//        });
+
+//        if (rows.length < 100) break;
+//        pageNo++;
+//      } catch (err) {
+//        console.error(`${indName} 수집 오류:`, err);
+//        break;
+//      }
+//    }
+//  }
 
   leads = allFetchedData;
   applyFilters();
