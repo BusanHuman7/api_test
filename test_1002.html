@@ -666,14 +666,28 @@ qs("#addBranchBtn").addEventListener("click", (e) => {
   applyFilters();
 });
 
+// 📍 시/도별 개방자치단체코드(5자리) 매핑
+const REGION_CODE_MAP = {
+  '부산광역시': ['3250000','3260000','3270000','3280000','3290000','3300000','3310000','3320000','3330000','3340000','3350000','3360000','3370000','3380000','3390000','3400000'],
+  '울산광역시': ['3690000','3700000','3710000','3720000','3730000'],
+  '경상남도': ['5310000','5320000','5330000','5340000','5350000','5360000','5370000','5380000','5390000','5400000','5410000','5420000','5430000','5440000','5450000','5460000','5470000','5480000']
+};
+
 async function fetchPublicData() {
   // 💡 API 호출 시에는 엑셀 날짜 안내 안함
   const noticeBox = qs("#excelDateNotice");
   if (noticeBox) noticeBox.style.display = "none";
 
   const selectedInds = qsa("#industryFilter input:checked").map(x => x.value);
-// 📍 선택된 지역 목록 추출 (예: ["부산광역시", "경상남도"])
   const selectedRegions = qsa("#regionFilter input:checked").map(x => x.value);
+
+// 📍 선택한 지역들의 개방자치단체코드를 하나의 배열로 통합
+  let regionCodes = [];
+  selectedRegions.forEach(reg => {
+    if (REGION_CODE_MAP[reg]) {
+      regionCodes = regionCodes.concat(REGION_CODE_MAP[reg]);
+    }
+  });
 
   const rawFrom = qs("#fromDate").value;
   const rawTo = qs("#toDate").value;
@@ -701,7 +715,7 @@ async function fetchPublicData() {
       try {
         const res = await callGasBackend("fetchPublicData", {
           category: indName,
-	  regions: selectedRegions, // 👈 지역 조건 추가 전달
+	  regionCode: code, // 👈 개방자치단체코드 1개씩 전달
           fromDate: fromClean,
           ltDate: ltClean,
           pageNo: pageNo
