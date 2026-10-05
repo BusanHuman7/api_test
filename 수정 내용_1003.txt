@@ -1,0 +1,26 @@
+완료했습니다. 기존 test_1002.html 형태는 유지하고 test_1003.html로 보완판을 만들었습니다.
+
+생성/수정 파일:
+
+C:\Users\Owner\Desktop\AI Agent 만들기\test_1003.html : 기존 화면 유지 + 보완
+C:\Users\Owner\Desktop\AI Agent 만들기\gas_backend_1003.gs : GAS 교체용
+C:\Users\Owner\Desktop\AI Agent 만들기\smtp-relay-server.js : 사내용 릴레이 서버
+외부 메일(사내 SMTP) — 중요한 제약
+GAS UrlFetchApp와 브라우저는 SMTP(TCP 25/587)에 직접 접속 불가합니다. 그래서 GAS → 릴레이 서버(HTTP) → 사내 SMTP 구조가 필수입니다.
+HTML 좌측에 발신 설정 추가: google / relay 선택, From 이름/이메일, 릴레이 URL/Key 저장(localStorage), 테스트 발송 포함.
+메일 모달에 발송방식, 제목 prefix, 본문 미리보기(첫 수신자 상위 3건), 제외 대상 표시 추가.
+GAS handleSendMail이 sender.mode에 따라 분기: google은 기존 MailApp, relay는 릴레이 URL로 UrlFetchApp POST.
+릴레이 실행:
+
+npm install express nodemailer dotenv
+# .env: PORT, API_KEY, SMTP_HOST/PORT/SECURE/USER/PASS, DEFAULT_FROM
+node smtp-relay-server.js
+GAS 스크립트 속성에 RELAY_URL, RELAY_KEY 설정 후 HTML 발신설정과 동일하게 입력하세요.
+
+API 속도 느림
+원인: 기존 코드가 시군구 코드 39개를 업종별로 반복 호출했는데, GAS는 regionCode를 URL에 사용하지 않아 39배 중복 조회였습니다.
+수정: 업종별 1회 호출 + 업종간 동시 4병렬, 페이지 순차, MNG_NO 기준 중복제거, 진행률/중단 버튼 추가. GAS에 CacheService 10분 캐시 + 3회 재시도 추가.
+Gemini 503
+백엔드: gemini-2.0-flash → 1.5-flash → 1.5-flash-8b 폴백, 503/429 지수 백오프 재시도, retryable 반환. 존재하지 않는 gemini-3.8-flash 단일 고정 문제 해소.
+프론트: callGasWithRetry 공통 래퍼, 단건/상권 4회 재시도, 일괄은 동시 3건 + 건당 1.2초 간격 + 이미 생성된 항목 스킵 + 중단 버튼.
+적용 순서: smtp-relay-server.js 사내 실행 → gas_backend_1003.gs를 GAS에 붙여넣고 배포 → test_1003.html에서 백엔드 URL 저장 → 연결 테스트 → 발신설정 저장 → 테스트 발송.
