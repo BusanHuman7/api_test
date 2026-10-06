@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>신규 인허가 영업 자동화 – 메인(유통망 매칭 & 상권 분석)</title>
+
 <!-- SheetJS 엑셀 파싱 라이브러리 -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -111,8 +112,9 @@
 <header>
   <h1>신규 인허가 영업 자동화 & 재약정 대상 추출</h1>
   <div class="sub">[사용법]</div>
-  <div class="sub">1. 신규 인허가 대상 조회 - 하단 [API 데이터 호출]</div>
-  <div class="sub">2. 34~37개월 이전 대상 조회 - [34~37개월 이전 데이터 추출](기준일:26.9.21)</div>
+	<div class="sub">1. 신규 인허가 대상 조회 - 하단 [API 데이터 호출]</div>
+	<div class="sub">2. 34~37개월 이전 대상 조회 - [34~37개월 이전 데이터 추출](기준일:26.9.21)</div>
+  <div class="sub" style="color:var(--warn);">※ GAS 단독으로는 사내 SMTP(TCP 25/587) 직접 접속이 불가합니다. 사내메일 발송은 하단 [발신 설정]의 릴레이 서버 경유가 필요합니다.</div>
 </header>
 
 <div class="container">
@@ -202,9 +204,35 @@
     <button class="btn btn-secondary" id="resetFilterBtn">초기화</button>
 
     <div class="grp" style="background:#0d162a; padding:10px; border-radius:8px; border:1px solid var(--line);">
-      <label style="color:var(--accent); font-weight:600; margin-top:0;">🔑 API Config 설정 상태</label>
-      <div style="margin-top:6px;"><span class="badge" id="configStatus">불러오는 중...</span></div>
-      <div class="hint" style="margin-top:6px;">로컬 PC의 config.json 파일에서 키값을 가져옵니다.</div>
+      <label style="color:var(--accent); font-weight:600; margin-top:0;">⚙️ 백엔드(GAS) 연결</label>
+      <input type="text" id="backendUrlInput" placeholder="GAS 웹앱 URL (https://script.google.com/...)" style="font-size:12px;" />
+      <div class="row" style="margin-top:6px;">
+        <button class="btn btn-secondary" id="saveBackendBtn" type="button" style="padding:6px; font-size:12px; margin-top:0;">저장</button>
+        <button class="btn btn-secondary" id="testBackendBtn" type="button" style="padding:6px; font-size:12px; margin-top:0;">연결 테스트</button>
+      </div>
+      <div style="margin-top:6px;"><span class="badge" id="backendStatus">미설정</span></div>
+      <div class="hint" style="margin-top:6px;">config.js가 없으면 이 입력값(localStorage BACKEND_URL)을 사용합니다.</div>
+    </div>
+
+    <div class="grp" style="background:#0d162a; padding:10px; border-radius:8px; border:1px solid #8b5cf6;">
+      <label style="color:#c4b5fd; font-weight:600; margin-top:0;">📧 발신 설정 (Google / 사내메일)</label>
+      <select id="senderMode" style="font-size:12px; margin-bottom:6px;">
+        <option value="google">Google 기본 발송 (MailApp)</option>
+        <option value="relay">사내 SMTP 릴레이 경유</option>
+      </select>
+      <input type="text" id="senderName" placeholder="보내는 사람 이름 (예: 영업지원팀)" style="font-size:12px; margin-bottom:6px;" />
+      <input type="email" id="senderEmail" placeholder="From 이메일 (릴레이용, 예: sales@company.co.kr)" style="font-size:12px; margin-bottom:6px;" />
+      <input type="text" id="relayUrl" placeholder="릴레이 서버 URL (예: http://10.0.0.5:3000/send)" style="font-size:12px; margin-bottom:6px;" />
+      <input type="password" id="relayKey" placeholder="릴레이 API Key (선택)" style="font-size:12px; margin-bottom:6px;" />
+      <div class="row" style="margin-top:2px;">
+        <button class="btn btn-secondary" id="saveSenderBtn" type="button" style="padding:6px; font-size:12px; margin-top:0;">발신설정 저장</button>
+        <button class="btn btn-secondary" id="testSenderBtn" type="button" style="padding:6px; font-size:12px; margin-top:0;">테스트 발송</button>
+      </div>
+      <div class="hint" style="margin-top:6px;">
+        • google: GAS 소유 계정으로 발송(별도 설정 불필요).<br/>
+        • relay: GAS가 사내 릴레이 서버로 HTTP 중계 → SMTP 발송.<br/>
+        • GAS는 TCP/SMTP 직접연결 불가이므로 릴레이 서버(smtp-relay-server.js 동봉)가 반드시 필요합니다.
+      </div>
     </div>
   </aside>
 
@@ -321,12 +349,20 @@
       <div style="background:#0b1220; border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:10px;">
         <div class="row">
           <div>
+            <label style="margin-top:0;">발송 방식</label>
+            <select id="mailSendMode" style="font-size:13px;">
+              <option value="google">Google 기본 발송</option>
+              <option value="relay">사내 SMTP 릴레이 경유</option>
+            </select>
+          </div>
+          <div>
             <label style="margin-top:0;">메일 제목(앞부분)</label>
             <input type="text" id="mailSubjectPrefix" value="[신규 인허가 영업 자동화] 담당 지역 영업 리드 안내" style="font-size:13px;" />
           </div>
         </div>
         <label>메일 본문 미리보기 (첫 번째 수신자 기준, 상위 3건)</label>
         <div class="script" id="mailPreview" style="background:#0b1220; border:1px solid var(--line); border-radius:8px; padding:10px; max-height:180px; overflow:auto; white-space:pre-wrap; font-size:12px;">수신자별 분류 후 표시됩니다.</div>
+        <div style="margin-top:6px;"><span class="badge" id="mailModeBadge">google 모드</span> <span class="hint" id="mailModeHint">GAS 소유 구글 계정으로 발송됩니다.</span></div>
       </div>
       <table class="table" style="margin-top:10px;">
         <thead>
@@ -353,33 +389,94 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<!-- 설정 파일 불러오기 영역 -->
+<div id="configSection">
+  <!-- 숨겨진 파일 선택 input -->
+  <input type="file" id="configFileImport" accept=".json" style="display: none;" onchange="handleConfigFileSelect(event)">
 
+  <!-- 불러오기 버튼 -->
+  <button type="button" onclick="document.getElementById('configFileImport').click()">
+    📂 config.json 설정 파일 불러오기
+  </button>
+</div>
+
+\
 <script>
-let CONFIG = {}; // config.json 설정 객체
+// 페이지 로드 시 즉시 설정값 존재 여부 확인
+document.addEventListener('DOMContentLoaded', function() {
+  checkConfigStatus();
+});
+
+// localStorage에 키 값이 모두 존재하는지 확인하여 UI를 토글하는 함수
+function checkConfigStatus() {
+  const publicApiKey = localStorage.getItem('PUBLIC_DATA_API_KEY');
+  const geminiApiKey = localStorage.getItem('GEMINI_API_KEY');
+  const configSection = document.getElementById('configSection');
+
+  // 두 키 값이 모두 존재하면 불러오기 버튼 영역을 숨김
+  if (publicApiKey && geminiApiKey) {
+    if (configSection) {
+      configSection.style.display = 'none';
+    }
+  } else {
+    if (configSection) {
+      configSection.style.display = 'block';
+    }
+  }
+}
+
+// 저장된 API Key 읽어오기
+const PUBLIC_DATA_API_KEY = localStorage.getItem('PUBLIC_DATA_API_KEY');
+const GEMINI_API_KEY = localStorage.getItem('GEMINI_API_KEY');
+
+// 사용 예시
+if (!PUBLIC_DATA_API_KEY || !GEMINI_API_KEY) {
+  console.warn('API Key가 설정되지 않았습니다. config.json을 등록해 주세요.');
+}
+
+// config.json 파일 선택 시 실행되는 함수
+function handleConfigFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const config = JSON.parse(e.target.result);
+      
+      // 공공데이터 API Key 및 Gemini API Key 검증 및 저장
+      if (config.PUBLIC_DATA_API_KEY) {
+        localStorage.setItem('PUBLIC_DATA_API_KEY', config.PUBLIC_DATA_API_KEY);
+      }
+      
+      if (config.GEMINI_API_KEY) {
+        localStorage.setItem('GEMINI_API_KEY', config.GEMINI_API_KEY);
+      }
+
+      // 두 키 중 하나라도 누락된 경우 안내
+      if (!config.PUBLIC_DATA_API_KEY || !config.GEMINI_API_KEY) {
+        alert('일부 API Key(공공데이터 또는 Gemini)가 파일에 누락되어 있습니다.');
+      } else {
+        alert('API Key 설정이 성공적으로 완료되었습니다!');
+      }
+
+      // 상태 업데이트 (버튼 숨기기 적용) 및 화면 갱신
+      checkConfigStatus();
+      location.reload(); 
+
+    } catch (err) {
+      alert('올바른 json 형식이 아닙니다. config.json 파일을 확인해 주세요.');
+      console.error('Config Import Error:', err);
+    }
+  };
+
+  reader.readAsText(file, 'UTF-8');
+}
+
 let leads = []; 
 let filtered = []; 
 let selectedId = null;
 let currentSelectedItem = null;
-
-// config.json 로드 함수
-async function loadConfigFile() {
-  const el = qs("#configStatus");
-  try {
-    const response = await fetch('./config.json');
-    if (!response.ok) throw new Error("config.json 파일을 찾을 수 없습니다.");
-    CONFIG = await response.json();
-    if (el) {
-      el.textContent = "config.json 로드 성공";
-      el.className = "badge ok";
-    }
-  } catch (error) {
-    console.warn("config.json 로드 실패:", error);
-    if (el) {
-      el.textContent = "config.json 로드 실패";
-      el.className = "badge err";
-    }
-  }
-}
 
 function openNaverMap(address, name) {
   const searchQuery = (address && address.trim() !== '' && address.trim() !== '-') ? address : name;
@@ -675,6 +772,18 @@ function loadSavedConfigs() {
     try { branchMapList = JSON.parse(saved); } catch(e) {}
   }
   renderBranchList();
+  // 백엔드 URL / 발신 설정 복원
+  const bu = localStorage.getItem("BACKEND_URL");
+  if (bu && qs("#backendUrlInput")) qs("#backendUrlInput").value = bu;
+  updateBackendBadge();
+  const sc = loadSenderConfig();
+  if (qs("#senderMode")) qs("#senderMode").value = sc.mode;
+  if (qs("#senderName")) qs("#senderName").value = sc.fromName || "";
+  if (qs("#senderEmail")) qs("#senderEmail").value = sc.fromEmail || "";
+  if (qs("#relayUrl")) qs("#relayUrl").value = sc.relayUrl || "";
+  if (qs("#relayKey")) qs("#relayKey").value = sc.relayKey || "";
+  if (qs("#mailSendMode")) qs("#mailSendMode").value = sc.mode;
+  updateMailModeUI();
 }
 
 function toast(msg, ms = 2600) {
@@ -686,7 +795,96 @@ function toast(msg, ms = 2600) {
   t._timer = setTimeout(() => t.style.display = "none", ms);
 }
 
+function getBackendUrl() {
+  if (typeof CONFIG !== "undefined" && CONFIG.BACKEND_URL) return CONFIG.BACKEND_URL;
+  return localStorage.getItem("BACKEND_URL") || "";
+}
+
+function updateBackendBadge() {
+  const el = qs("#backendStatus");
+  if (!el) return;
+  const url = getBackendUrl();
+  if (!url) { el.textContent = "미설정"; el.className = "badge warn"; }
+  else { el.textContent = "설정됨"; el.className = "badge ok"; }
+}
+
+function loadSenderConfig() {
+  try { return JSON.parse(localStorage.getItem("MAIL_SENDER_CONFIG") || "{}"); }
+  catch(e) { return {}; }
+}
+function getSenderConfig() {
+  const s = loadSenderConfig();
+  return {
+    mode: s.mode || (qs("#senderMode") ? qs("#senderMode").value : "google") || "google",
+    fromName: s.fromName || (qs("#senderName") ? qs("#senderName").value.trim() : "") || "",
+    fromEmail: s.fromEmail || (qs("#senderEmail") ? qs("#senderEmail").value.trim() : "") || "",
+    relayUrl: s.relayUrl || (qs("#relayUrl") ? qs("#relayUrl").value.trim() : "") || "",
+    relayKey: s.relayKey || (qs("#relayKey") ? qs("#relayKey").value.trim() : "") || ""
+  };
+}
+function saveSenderConfig(s) {
+  localStorage.setItem("MAIL_SENDER_CONFIG", JSON.stringify(s));
+}
+function updateMailModeUI() {
+  const mode = qs("#mailSendMode") ? qs("#mailSendMode").value : getSenderConfig().mode;
+  const badge = qs("#mailModeBadge"), hint = qs("#mailModeHint");
+  if (badge) { badge.textContent = mode + " 모드"; }
+  if (hint) {
+    hint.textContent = mode === "relay"
+      ? "릴레이 서버 경유로 From 주소 그대로 발송됩니다."
+      : "GAS 소유 구글 계정으로 발송됩니다.";
+  }
+}
+
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function callGasBackend(action, params = {}, opts = {}) {
+  const backendUrl = getBackendUrl();
+  if (!backendUrl) {
+    alert("GAS BACKEND_URL이 설정되어 있지 않습니다. 좌측 [백엔드 연결]에 URL을 저장해 주세요.");
+    throw new Error("Backend URL missing");
+  }
+  const timeoutMs = opts.timeoutMs || 60000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: action, params: params }),
+      signal: controller.signal
+    });
+    const text = await response.text();
+    try { return JSON.parse(text); }
+    catch(e) { throw new Error("백엔드 응답 파싱 실패: " + text.slice(0,120)); }
+  } finally { clearTimeout(timer); }
+}
+
+// 503/429 등 일시 오류에 대한 지수 백오프 재시도 래퍼
+async function callGasWithRetry(action, params = {}, retryOpts = {}) {
+  const maxRetry = retryOpts.maxRetry ?? 4;
+  const baseDelay = retryOpts.baseDelay ?? 1500;
+  let lastErr = null;
+  for (let attempt = 0; attempt <= maxRetry; attempt++) {
+    try {
+      const res = await callGasBackend(action, params, { timeoutMs: retryOpts.timeoutMs || 60000 });
+      // 백엔드가 retryable:true 로 준 경우 재시도
+      if (res && res.status === "error" && res.retryable && attempt < maxRetry) {
+        lastErr = new Error(res.message || "일시 오류");
+        await sleep(baseDelay * Math.pow(2, attempt) + Math.random()*500);
+        continue;
+      }
+      return res;
+    } catch (e) {
+      lastErr = e;
+      const msg = String(e && e.message || e);
+      const retryable = /503|429|overloaded|timeout|abort|network|fetch|파싱 실패/i.test(msg);
+      if (!retryable || attempt >= maxRetry) throw e;
+      await sleep(baseDelay * Math.pow(2, attempt) + Math.random()*500);
+    }
+  }
+  throw lastErr || new Error("재시도 초과");
+}
 
 qs("#addBranchBtn").addEventListener("click", (e) => {
   e.preventDefault();
@@ -709,6 +907,12 @@ qs("#addBranchBtn").addEventListener("click", (e) => {
   applyFilters();
 });
 
+const REGION_CODE_MAP = {
+  '부산광역시': ['3250000','3260000','3270000','3280000','3290000','3300000','3310000','3320000','3330000','3340000','3350000','3360000','3370000','3380000','3390000','3400000'],
+  '울산광역시': ['3690000','3700000','3710000','3720000','3730000'],
+  '경상남도': ['5310000','5320000','5330000','5340000','5350000','5360000','5370000','5380000','5390000','5400000','5410000','5420000','5430000','5440000','5450000','5460000','5470000','5480000']
+};
+
 let cancelFetchFlag = false;
 qs("#cancelFetchBtn")?.addEventListener("click", () => { cancelFetchFlag = true; });
 
@@ -723,14 +927,9 @@ function hideFetchProgress() {
   if (wrap) wrap.style.display = "none";
 }
 
-// config.json의 PUBLIC_DATA_API_KEY를 사용하여 공공데이터포털 API 직접 호출
+// 업종별 1회 호출 + 업종간 병렬(동시 4) + 페이지 순차 + 중복제거
+// 기존처럼 시군구 코드별 반복 호출(백엔드가 regionCode를 무시해 중복 조회되던 문제)을 제거해 약 1/39 수준으로 호출량을 줄였습니다.
 async function fetchPublicData() {
-  const apiKey = CONFIG.PUBLIC_DATA_API_KEY;
-  if (!apiKey) {
-    alert("config.json 파일에 'PUBLIC_DATA_API_KEY'가 설정되어 있지 않습니다.");
-    return;
-  }
-
   const noticeBox = qs("#excelDateNotice");
   if (noticeBox) noticeBox.style.display = "none";
 
@@ -760,6 +959,8 @@ async function fetchPublicData() {
   if (apiBtn) apiBtn.disabled = true;
   setFetchProgress(2, "조회 시작…");
 
+  const CONCURRENCY = 4;
+  const MAX_PAGES = 10;
   let allFetchedData = [];
   const seenKeys = new Set();
   let doneCats = 0;
@@ -767,50 +968,56 @@ async function fetchPublicData() {
   async function fetchOneCategory(indName) {
     let pageNo = 1;
     const catRows = [];
-    while (pageNo <= 10) {
+    while (pageNo <= MAX_PAGES) {
       if (cancelFetchFlag) break;
+      let res;
       try {
-        const url = `https://apis.data.go.kr/1360000/v1/getPublicData?serviceKey=${encodeURIComponent(apiKey)}&pageNo=${pageNo}&numOfRows=100&type=json&fromDate=${fromClean}&toDate=${ltClean}`;
-        const response = await fetch(url);
-        if (!response.ok) break;
-        const res = await response.json();
-
-        let rawItems = res.response?.body?.items?.item || res.body?.items || res.items;
-        let rows = Array.isArray(rawItems) ? rawItems : (rawItems ? [rawItems] : []);
-        if (rows.length === 0) break;
-
-        rows.forEach((item, index) => {
-          const rawAddr = item.ROAD_NM_ADDR || item.LOTNO_ADDR || item.SITE_ADDR || "";
-          const tokens = rawAddr.trim().split(/\s+/);
-          const district = tokens[1] || "-";
-          const dedupKey = (item.MNG_NO || "") + "|" + (item.BPLC_NM || item.NAME || "") + "|" + rawAddr;
-          if (seenKeys.has(dedupKey)) return;
-          seenKeys.add(dedupKey);
-          catRows.push({
-            id: `${indName}_p${pageNo}_${index}_${item.MNG_NO || index}_${Date.now()}`,
-            name: item.BPLC_NM || item.NAME || "상호미표시",
-            industry: `${item.BZSTAT_SE_NM || '미분류'} (${indName})`,
-            originIndustryType: indName,
-            region: tokens[0] || "기타지역",
-            district: district,
-            addr: rawAddr,
-            telno: formatPhoneNumber(item.TELNO || item.SITE_TEL || item.LOCAL_TELNO || item.TEL || "-"),
-            mobile: item.HP || item.MOBILE || "-",
-            targetEmail: "",
-            permit_date: parsePermitDate(item),
-            lat: item.Y || item.LAT || null,
-            lng: item.X || item.LNG || null,
-            aiScript: ""
-          });
-        });
-
-        if (rows.length < 100) break;
-        pageNo++;
-        await sleep(300);
+        res = await callGasWithRetry("fetchPublicData", {
+          category: indName,
+          fromDate: fromClean,
+          ltDate: ltClean,
+          pageNo: pageNo
+        }, { maxRetry: 2, baseDelay: 1000, timeoutMs: 60000 });
       } catch (e) {
         console.warn(indName + " " + pageNo + "p 실패:", e);
         break;
       }
+      if (!res || res.status !== "success") break;
+
+      let rawItems = res.data?.response?.body?.items?.item
+        || res.data?.body?.items
+        || res.data?.items;
+      let rows = Array.isArray(rawItems) ? rawItems : (rawItems ? [rawItems] : []);
+      if (rows.length === 0) break;
+
+      rows.forEach((item, index) => {
+        const rawAddr = item.ROAD_NM_ADDR || item.LOTNO_ADDR || item.SITE_ADDR || "";
+        const tokens = rawAddr.trim().split(/\s+/);
+        const district = tokens[1] || "-";
+        const dedupKey = (item.MNG_NO || "") + "|" + (item.BPLC_NM || item.NAME || "") + "|" + rawAddr;
+        if (seenKeys.has(dedupKey)) return;
+        seenKeys.add(dedupKey);
+        catRows.push({
+          id: `${indName}_p${pageNo}_${index}_${item.MNG_NO || index}_${Date.now()}`,
+          name: item.BPLC_NM || item.NAME || "상호미표시",
+          industry: `${item.BZSTAT_SE_NM || '미분류'} (${indName})`,
+          originIndustryType: indName,
+          region: tokens[0] || "기타지역",
+          district: district,
+          addr: rawAddr,
+          telno: formatPhoneNumber(item.TELNO || item.SITE_TEL || item.LOCAL_TELNO || item.TEL || "-"),
+          mobile: item.HP || item.MOBILE || "-",
+          targetEmail: "",
+          permit_date: parsePermitDate(item),
+          lat: item.Y || item.LAT || null,
+          lng: item.X || item.LNG || null,
+          aiScript: ""
+        });
+      });
+
+      if (rows.length < 100) break;
+      pageNo++;
+      await sleep(300);
     }
     doneCats++;
     setFetchProgress(2 + Math.round(doneCats / selectedInds.length * 96), `${doneCats}/${selectedInds.length} 업종 완료 (${indName}: ${catRows.length}건)`);
@@ -818,11 +1025,17 @@ async function fetchPublicData() {
   }
 
   try {
-    for (const cat of selectedInds) {
-      if (cancelFetchFlag) break;
-      const rows = await fetchOneCategory(cat);
-      allFetchedData = allFetchedData.concat(rows);
-    }
+    // 동시 실행 풀
+    const queue = [...selectedInds];
+    const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+      while (queue.length > 0) {
+        if (cancelFetchFlag) break;
+        const cat = queue.shift();
+        const rows = await fetchOneCategory(cat);
+        allFetchedData = allFetchedData.concat(rows);
+      }
+    });
+    await Promise.all(workers);
 
     leads = allFetchedData;
     applyFilters();
@@ -963,38 +1176,24 @@ function renderDetail(id){
   qs("#dScript").textContent = item.aiScript || "버튼을 눌러 영업 스크립트 또는 상권 분석 결과를 확인하세요.";
 }
 
-// config.json의 GEMINI_API_KEY를 참조하여 Gemini API 직접 호출
 qs("#aiGenerateBtn").addEventListener("click", async () => {
   if (!currentSelectedItem) { alert("대상을 선택해 주세요."); return; }
-  const geminiKey = CONFIG.GEMINI_API_KEY;
-  if (!geminiKey) {
-    alert("config.json 파일에 'GEMINI_API_KEY'가 설정되어 있지 않습니다.");
-    return;
-  }
-
   const scriptBox = qs("#dScript");
-  scriptBox.innerHTML = `<span class="spinner"></span> Gemini AI 영업 스크립트 생성 중...`;
+  scriptBox.innerHTML = `<span class="spinner"></span> GAS 백엔드에서 스크립트 생성 중... (503 시 자동 재시도)`;
 
   try {
-    const promptText = `상호명: ${currentSelectedItem.name}, 업종: ${currentSelectedItem.industry}, 위치: ${currentSelectedItem.addr}. 이 매장에 맞는 맞춤형 B2B 영업 스크립트를 작성해줘.`;
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }]
-      })
-    });
+    const res = await callGasWithRetry("generateScript", { item: currentSelectedItem }, { maxRetry: 4, baseDelay: 2000 });
+    console.log("백엔드 응답 결과:", res);
 
-    const data = await response.json();
-    if (data.candidates && data.candidates[0].content.parts[0].text) {
-      const generatedText = data.candidates[0].content.parts[0].text;
-      currentSelectedItem.aiScript = generatedText;
-      scriptBox.textContent = generatedText;
+    if (res && res.status === "success") {
+      currentSelectedItem.aiScript = res.script;
+      scriptBox.textContent = res.script + (res.model ? `\n\n— 생성 모델: ${res.model}` : "");
     } else {
-      scriptBox.textContent = "❌ AI 스크립트 생성에 실패했습니다.";
+      const errMsg = (res && res.message) ? res.message : "알 수 없는 응답 오류";
+      scriptBox.textContent = `❌ 생성 실패: ${errMsg}${res && res.retryable ? " (일시 오류, 잠시 후 다시 시도해 주세요)" : ""}`;
     }
   } catch (e) {
-    console.error("Gemini API Error:", e);
+    console.error("catch로 들어온 에러:", e);
     scriptBox.textContent = `❌ 생성 실패: ${e.message}`;
   }
 });
@@ -1005,31 +1204,16 @@ const modalTitle = qs("#modalTitle");
 
 qs("#aiMarketBtn").addEventListener("click", async () => {
   if (!currentSelectedItem) { alert("대상을 먼저 선택해 주세요."); return; }
-  const geminiKey = CONFIG.GEMINI_API_KEY;
-  if (!geminiKey) {
-    alert("config.json 파일에 'GEMINI_API_KEY'가 설정되어 있지 않습니다.");
-    return;
-  }
-
   modalTitle.textContent = `📍 [${currentSelectedItem.name}] 상권 분석 심층 리포트`;
-  modalBody.innerHTML = `<span class="spinner"></span> Gemini AI 상권 분석 리포트 작성 중...`;
+  modalBody.innerHTML = `<span class="spinner"></span> 실시간 상권 분석 리포트 작성 중... (503 시 자동 재시도)`;
   marketModal.style.display = "flex";
 
   try {
-    const promptText = `상호명: ${currentSelectedItem.name}, 업종: ${currentSelectedItem.industry}, 위치: ${currentSelectedItem.addr}. 이 매장의 위치 및 업종 기반 상권 분석 리포트를 작성해줘.`;
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }]
-      })
-    });
-
-    const data = await response.json();
-    if (data.candidates && data.candidates[0].content.parts[0].text) {
-      modalBody.textContent = data.candidates[0].content.parts[0].text;
+    const res = await callGasWithRetry("analyzeMarket", { item: currentSelectedItem }, { maxRetry: 4, baseDelay: 2000, timeoutMs: 90000 });
+    if (res.status === "success" && res.report) {
+      modalBody.textContent = res.report;
     } else {
-      modalBody.textContent = "❌ 상권 분석 리포트 생성 실패";
+      modalBody.textContent = `❌ 상권 분석 실패: ${res.message}`;
     }
   } catch (e) {
     modalBody.textContent = `❌ 상권 분석 실패: ${e.message}`;
@@ -1038,6 +1222,60 @@ qs("#aiMarketBtn").addEventListener("click", async () => {
 
 qs("#modalCloseBtn").addEventListener("click", () => marketModal.style.display = "none");
 marketModal.addEventListener("click", (e) => { if (e.target === marketModal) marketModal.style.display = "none"; });
+
+let cancelBatchFlag = false;
+qs("#cancelBatchBtn")?.addEventListener("click", () => { cancelBatchFlag = true; });
+function setBatchProgress(pct, text) {
+  const wrap = qs("#batchProgress"), bar = qs("#batchProgressBar"), tx = qs("#batchProgressText");
+  if (wrap) wrap.style.display = "block";
+  if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + "%";
+  if (tx) tx.textContent = text;
+}
+
+qs("#batchScriptBtn").addEventListener("click", async () => {
+  if (filtered.length === 0) { alert("조회된 데이터가 없습니다."); return; }
+  // 이미 생성된 항목은 건너뛰기
+  const targets = filtered.filter(x => !x.aiScript || x.aiScript.length < 10);
+  if (targets.length === 0) { toast("이미 모든 항목에 스크립트가 있습니다."); return; }
+  if (!confirm(`미생성 ${targets.length}건에 대해 스크립트를 생성합니다. (동시 3건 + 503 자동재시도)\n계속할까요?`)) return;
+
+  const scriptBox = qs("#dScript");
+  qs("#detailPane").style.display = "block";
+  qs("#detailInfo").style.display = "none";
+  cancelBatchFlag = false;
+  qs("#cancelBatchBtn").style.display = "inline-block";
+  qs("#batchScriptBtn").disabled = true;
+  setBatchProgress(2, "시작…");
+
+  const CONC = 3;
+  let done = 0, ok = 0, fail = 0;
+  const queue = [...targets];
+  async function worker() {
+    while (queue.length > 0) {
+      if (cancelBatchFlag) break;
+      const item = queue.shift();
+      try {
+        const res = await callGasWithRetry("generateScript", { item: item }, { maxRetry: 4, baseDelay: 2000 });
+        if (res.status === "success") { item.aiScript = res.script; ok++; }
+        else { item.aiScript = "생성 실패: " + (res.message || ""); fail++; }
+      } catch (e) {
+        item.aiScript = "오류: " + e.message; fail++;
+      }
+      done++;
+      setBatchProgress(2 + Math.round(done / targets.length * 96), `${done}/${targets.length} 완료 (성공 ${ok}, 실패 ${fail}) — ${item.name}`);
+      if (currentSelectedItem && currentSelectedItem.id === item.id) scriptBox.textContent = item.aiScript;
+      await sleep(1200); // 분당 할당량 보호용 간격
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONC, queue.length) }, () => worker()));
+  qs("#cancelBatchBtn").style.display = "none";
+  qs("#batchScriptBtn").disabled = false;
+  scriptBox.textContent = cancelBatchFlag
+    ? `⏹ 중단됨 — 성공 ${ok} / 실패 ${fail} / 전체 ${targets.length}`
+    : `✅ 총 ${targets.length}건 중 성공 ${ok}건, 실패 ${fail}건 생성 완료!`;
+  toast(`스크립트 일괄 생성 완료 (성공 ${ok}, 실패 ${fail})`);
+  setTimeout(() => { const w = qs("#batchProgress"); if (w) w.style.display = "none"; }, 3000);
+});
 
 function downloadExcel() {
   if (filtered.length === 0) { alert("다운로드할 데이터가 없습니다."); return; }
@@ -1072,6 +1310,107 @@ function downloadExcel() {
   document.body.removeChild(link);
 }
 
+const mailModal = qs("#mailModal");
+
+function buildGroupedLeads() {
+  const grouped = {};
+  filtered.forEach(item => {
+    const emails = matchBranchEmails(item.addr, item.district, item.originIndustryType);
+    const targetList = emails.length > 0 ? emails : ["미지정"];
+    targetList.forEach(email => {
+      if (!grouped[email]) grouped[email] = [];
+      grouped[email].push(item);
+    });
+  });
+  return grouped;
+}
+
+function buildMailBody(items, maxItems = 3) {
+  let body = "안녕하세요, 담당 유통망 담당자님.\n\n신규 인허가 영업 리드 목록을 전달드립니다.\n\n";
+  items.slice(0, maxItems).forEach((item, idx) => {
+    body += `[${idx + 1}] 상호명 : ${item.name}\n- 업종: ${item.industry}\n- 주소: ${item.addr}\n- 전화번호: ${item.telno}\n- 인허가일: ${item.permit_date}\n----------------------------------------\n`;
+  });
+  if (items.length > maxItems) body += `\n... 외 ${items.length - maxItems}건 (전체 목록은 첨부/본문 전체 발송 참조)\n`;
+  return body;
+}
+
+qs("#openMailModalBtn").addEventListener("click", () => {
+  if (filtered.length === 0) { alert("발송할 데이터가 없습니다."); return; }
+
+  const groupedByEmail = buildGroupedLeads();
+
+  const tbody = qs("#mailSummaryBody");
+  tbody.innerHTML = "";
+  const entries = Object.entries(groupedByEmail);
+  for (const [email, items] of entries) {
+    const bad = email === "미지정" || !email.includes("@");
+    tbody.innerHTML += `<tr><td>대리점</td><td><b>${email}</b></td><td>${items.length}건</td><td>${bad ? '<span class="badge warn">제외됨</span>' : '대기'}</td></tr>`;
+  }
+  // 미리보기
+  const firstValid = entries.find(([e]) => e !== "미지정" && e.includes("@"));
+  qs("#mailPreview").textContent = firstValid
+    ? `To: ${firstValid[0]}\nSubject: ${qs("#mailSubjectPrefix").value} (${firstValid[1].length}건)\n\n` + buildMailBody(firstValid[1])
+    : "유효한 수신자가 없습니다. 유통망 매핑을 확인해 주세요.";
+  const mp = qs("#mailProgress"); if (mp) mp.style.display = "none";
+  mailModal.style.display = "flex";
+});
+
+qs("#mailModalCloseBtn").addEventListener("click", () => mailModal.style.display = "none");
+qs("#cancelMailBtn").addEventListener("click", () => mailModal.style.display = "none");
+
+qs("#confirmSendMailBtn").addEventListener("click", async () => {
+  const btn = qs("#confirmSendMailBtn");
+  btn.innerHTML = `<span class="spinner"></span> 메일 발송 중...`;
+  btn.disabled = true;
+  const mp = qs("#mailProgress"), mpBar = qs("#mailProgressBar"), mpTx = qs("#mailProgressText");
+  if (mp) mp.style.display = "block";
+
+  try {
+    const groupedLeads = buildGroupedLeads();
+    const sender = getSenderConfig();
+    // 모달 내 선택값을 우선 적용
+    sender.mode = qs("#mailSendMode") ? qs("#mailSendMode").value : sender.mode;
+    const subjectPrefix = qs("#mailSubjectPrefix") ? qs("#mailSubjectPrefix").value.trim() : "";
+
+    if (sender.mode === "relay" && !sender.relayUrl) {
+      alert("릴레이 모드에는 릴레이 서버 URL이 필요합니다. 좌측 [발신 설정]을 저장해 주세요.");
+      return;
+    }
+    if (sender.mode === "relay" && !sender.fromEmail) {
+      if (!confirm("From 이메일이 비어 있습니다. 릴레이 서버 기본값으로 발송할까요?")) return;
+    }
+
+    const validCount = Object.keys(groupedLeads).filter(e => e !== "미지정" && e.includes("@")).length;
+    if (validCount === 0) { alert("유효한 수신자가 없습니다."); return; }
+    if (!confirm(`${validCount}개 수신처, 총 ${filtered.length}건 데이터를 [${sender.mode}] 방식으로 발송할까요?`)) return;
+
+    if (mpTx) mpTx.textContent = "발송 요청 중…";
+    if (mpBar) mpBar.style.width = "20%";
+
+    const res = await callGasWithRetry("sendMail", {
+      groupedLeads: groupedLeads,
+      sender: sender,
+      subjectPrefix: subjectPrefix
+    }, { maxRetry: 2, baseDelay: 1500, timeoutMs: 120000 });
+
+    if (mpBar) mpBar.style.width = "100%";
+    if (res.status === "success") {
+      let msg = `🚀 총 ${res.sentCount}개 담당 대리점으로 이메일 발송 완료! (방식: ${res.via || sender.mode})`;
+      if (res.failCount) msg += `\n실패: ${res.failCount}건`;
+      if (res.failed && res.failed.length) msg += "\n실패 목록: " + res.failed.slice(0,5).join(", ");
+      alert(msg);
+      mailModal.style.display = "none";
+    } else {
+      alert("❌ 발송 실패: " + res.message);
+    }
+  } catch (err) {
+    alert("❌ 이메일 전송 오류: " + err.message);
+  } finally {
+    btn.innerHTML = `🚀 이메일 일괄 발송 시작`;
+    btn.disabled = false;
+  }
+});
+
 qs("#searchBox").addEventListener("input", applyFilters);
 qsa("#regionFilter input").forEach(chk => chk.addEventListener("change", applyFilters));
 qsa("#industryFilter input").forEach(chk => chk.addEventListener("change", applyFilters));
@@ -1080,7 +1419,58 @@ qs("#toDate").addEventListener("change", applyFilters);
 qs("#apiFetchBtn").addEventListener("click", fetchPublicData);
 qs("#extractExcelBtn").addEventListener("click", loadAndExtractExcelData);
 qs("#downloadExcelBtn").addEventListener("click", downloadExcel);
-
+// 백엔드 / 발신 설정 바인딩
+qs("#saveBackendBtn")?.addEventListener("click", () => {
+  const v = qs("#backendUrlInput").value.trim();
+  if (!v) { alert("GAS 웹앱 URL을 입력해 주세요."); return; }
+  localStorage.setItem("BACKEND_URL", v);
+  updateBackendBadge();
+  toast("백엔드 URL 저장됨");
+});
+qs("#testBackendBtn")?.addEventListener("click", async () => {
+  try {
+    const res = await callGasBackend("ping", {});
+    alert("✅ 연결 성공: " + (res.message || JSON.stringify(res)));
+  } catch (e) { alert("❌ 연결 실패: " + e.message); }
+});
+function collectSenderForm() {
+  return {
+    mode: qs("#senderMode").value,
+    fromName: qs("#senderName").value.trim(),
+    fromEmail: qs("#senderEmail").value.trim(),
+    relayUrl: qs("#relayUrl").value.trim().replace(/\/$/, ""),
+    relayKey: qs("#relayKey").value.trim()
+  };
+}
+qs("#saveSenderBtn")?.addEventListener("click", () => {
+  const s = collectSenderForm();
+  if (s.mode === "relay" && !s.relayUrl) { alert("릴레이 모드에는 릴레이 서버 URL이 필수입니다."); return; }
+  saveSenderConfig(s);
+  if (qs("#mailSendMode")) qs("#mailSendMode").value = s.mode;
+  updateMailModeUI();
+  toast("발신 설정 저장됨 (" + s.mode + ")");
+});
+qs("#testSenderBtn")?.addEventListener("click", async () => {
+  const s = collectSenderForm();
+  const to = prompt("테스트 수신 이메일을 입력해 주세요:", s.fromEmail || "");
+  if (!to) return;
+  try {
+    const res = await callGasWithRetry("sendMail", {
+      groupedLeads: { [to]: [{ name: "테스트 상호", industry: "테스트 업종", addr: "테스트 주소", telno: "010-0000-0000", permit_date: new Date().toISOString().slice(0,10), aiScript: "" }] },
+      sender: s,
+      subjectPrefix: "[테스트]",
+      isTest: true
+    }, { maxRetry: 1, timeoutMs: 60000 });
+    if (res.status === "success") alert(`✅ 테스트 발송 성공 (via ${res.via})`);
+    else alert("❌ 테스트 실패: " + res.message);
+  } catch (e) { alert("❌ 테스트 오류: " + e.message); }
+});
+qs("#senderMode")?.addEventListener("change", (e) => { if (qs("#mailSendMode")) qs("#mailSendMode").value = e.target.value; updateMailModeUI(); });
+qs("#mailSendMode")?.addEventListener("change", (e) => { if (qs("#senderMode")) qs("#senderMode").value = e.target.value; updateMailModeUI(); });
+qs("#mailSubjectPrefix")?.addEventListener("input", () => {
+  const firstValid = Object.entries(buildGroupedLeads()).find(([e]) => e !== "미지정" && e.includes("@"));
+  if (firstValid) qs("#mailPreview").textContent = `To: ${firstValid[0]}\nSubject: ${qs("#mailSubjectPrefix").value} (${firstValid[1].length}건)\n\n` + buildMailBody(firstValid[1]);
+});
 qs("#resetFilterBtn").addEventListener("click", () => {
   leads = [];
   filtered = [];
@@ -1109,8 +1499,6 @@ function initDates(){
   qs("#fromDate").value = new Date(today.getTime()-6*86400000).toISOString().slice(0,10);
 }
 
-// 초기화 실행
-loadConfigFile();
 initDates();
 loadSavedConfigs();
 </script>
