@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>신규 인허가 영업 자동화 – 메인(유통망 매칭 & 상권 분석)</title>
+<!-- SheetJS 엑셀 파싱 라이브러리 -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#0f172a; --sub:#0c1426; --line:#253043;
+    --text:#e5e7eb; --muted:#9aa7bd; --accent:#60a5fa; --ok:#34d399; --warn:#fbbf24; --danger:#f87171;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; font-family:-apple-system, Segoe UI, Roboto, Arial; background:linear-gradient(180deg,#081120 0%, #0b1220 100%); color:var(--text)}
+  header{padding:16px 18px; border-bottom:1px solid var(--line); background:#0d162a; position:sticky; top:0; z-index:10}
+  header h1{margin:0; font-size:18px}
+  header .sub{color:var(--muted); font-size:13px; margin-top:4px}
+  .container{display:grid; grid-template-columns: 320px 1fr; gap:12px; padding:12px; max-width:1600px; margin:0 auto}
+  @media (max-width: 1024px){ .container{grid-template-columns:1fr} }
+  .side{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:12px;}
+  .main{display:grid; grid-template-rows: auto 1fr; gap:12px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px}
+  .card .hd{padding:10px 12px; border-bottom:1px solid var(--line); background:#0d162a; font-weight:600; font-size:14px; display:flex; justify-content:space-between; align-items:center;}
+  .card .bd{padding:12px}
+  label{display:block; margin:6px 0 4px; color:#cbd5e1; font-size:13px}
+  .grp{padding-bottom:10px; border-bottom:1px dashed var(--line)}
+  .chkrow{display:flex; gap:8px; flex-wrap:wrap}
+  .chkrow label{display:flex; align-items:center; gap:6px; border:1px solid var(--line); padding:6px 8px; border-radius:8px; font-size:13px; background:#0c1426}
+  input[type="text"], input[type="password"], select{width:100%; background:#0b1220; border:1px solid var(--line); color:#fff; border-radius:8px; padding:8px}
+  input[type="date"]{background:#0b1220; border:1px solid var(--line); color:#fff; border-radius:8px; padding:6px} 
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+
+  .btn { width: 100%; padding: 10px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
+  .btn:hover { background: #3b82f6; }
+  .btn-secondary { background: #334155; }
+  .btn-secondary:hover { background: #475569; }
+  .btn-action { background: #8b5cf6; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .btn-action:hover { background: #7c3aed; }
+  .btn-excel { background: #059669; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .btn-excel:hover { background: #10b981; }
+
+  .table{width:100%; border-collapse:collapse}
+  .table th,.table td{border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:10px 8px; font-size:13.5px; text-align:left; vertical-align:middle}
+  .table th{background:#0d162a; position:sticky; top:0; z-index:1}
+  .table tbody tr { cursor: pointer; transition: background 0.15s; }
+  .table tbody tr:hover { background: #1e293b; }
+  .table tbody tr.selected { background: #1e3a8a !important; }
+
+  .split{display:grid; grid-template-columns: 1fr 360px; gap:12px}
+  @media (max-width:1200px){ .split{grid-template-columns:1fr} }
+  .detail{height:100%; display:flex; flex-direction:column}
+  .detail .script{flex:1; background:#0b1220; border:1px solid var(--line); border-radius:8px; padding:10px; overflow:auto; white-space:pre-wrap}
+  .muted{color:var(--muted)}
+  .hl{color:#e2e8f0}
+  .row{display:flex; gap:8px}
+  .row > *{flex:1}
+  .statusbar{display:flex; gap:10px; align-items:center; color:#fff; font-size:13px; justify-content:space-between;}
+
+  .spinner {
+    display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%; border-top-color: #fff; animation: spin 0.8s linear infinite; margin-right: 6px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.75); z-index: 100; align-items: center; justify-content: center;
+  }
+  .modal-content {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    width: 90%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  }
+  .modal-header {
+    padding: 14px 18px; border-bottom: 1px solid var(--line); background: #0d162a;
+    display: flex; justify-content: space-between; align-items: center; font-weight: 600;
+  }
+  .modal-body { padding: 16px; overflow-y: auto; font-size: 14px; line-height: 1.6; color: var(--text); white-space: pre-wrap; }
+  .modal-footer { padding: 12px 18px; border-top: 1px solid var(--line); background: #0d162a; display:flex; justify-content:flex-end; gap:8px;}
+  .modal-close { background: transparent; border: none; color: var(--muted); font-size: 20px; cursor: pointer; }
+  .modal-close:hover { color: #fff; }
+
+  .branch-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: #0b1220; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 4px; font-size: 12px; }
+  .branch-del { color: var(--danger); cursor: pointer; font-weight: bold; margin-left: 6px; }
+
+  .btn-map { background: #059669; color: #fff; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .btn-map:hover { background: #10b981; }
+
+  .excel-date-banner {
+    background: #0284c7; color: #ffffff; padding: 8px 12px; border-radius: 6px;
+    font-size: 12px; font-weight: 600; margin-bottom: 10px; display: none;
+    border: 1px solid #38bdf8;
+  }
+  .progress-wrap{background:#0b1220; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:8px; display:none;}
+  .progress-bar{height:8px; background:#1e293b; border-radius:4px; overflow:hidden;}
+  .progress-bar > div{height:100%; width:0%; background:linear-gradient(90deg,#60a5fa,#8b5cf6); transition:width .2s;}
+  .progress-text{font-size:12px; color:var(--muted); margin-top:4px;}
+  .toast{position:fixed; right:14px; bottom:14px; background:#0d162a; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:13px; z-index:200; display:none; max-width:360px;}
+  .badge{display:inline-block; font-size:11px; padding:2px 6px; border-radius:4px; background:#1e293b; color:var(--muted);}
+  .badge.ok{background:#065f46; color:#a7f3d0;}
+  .badge.warn{background:#92400e; color:#fde68a;}
+  .badge.err{background:#7f1d1d; color:#fecaca;}
+  .hint{font-size:11px; color:var(--muted); line-height:1.5;}
+  input[type="email"], textarea{width:100%; background:#0b1220; border:1px solid var(--line); color:#fff; border-radius:8px; padding:8px;}
+  textarea{resize:vertical; min-height:60px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>신규 인허가 영업 자동화 & 재약정 대상 추출</h1>
+  <div class="sub">[사용법]</div>
+  <div class="sub">1. 신규 인허가 대상 조회 - 하단 [API 데이터 호출]</div>
+  <div class="sub">2. 34~37개월 이전 대상 조회 - [34~37개월 이전 데이터 추출](기준일:26.9.21)</div>
+</header>
+
+<div class="container">
+  <aside class="side">
+    <div class="grp" style="background:#0d162a; padding:10px; border-radius:8px; border:1px solid var(--accent);">
+      <label style="color:var(--accent); font-weight:600; margin-top:0;">📊 엑셀 데이터 (34~37개월)</label>
+      <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">
+        추출할 지역과 종목을 선택하면 <b>34~37개월 전</b> 데이터만 수집합니다.
+      </div>
+      
+      <label style="font-size:12px; margin: 6px 0 4px; color: var(--text);">지역 선택</label>
+      <div class="chkrow" id="excelRegionFilter" style="margin-bottom:8px;">
+        <label><input type="checkbox" value="부산광역시" checked> 부산</label>
+        <label><input type="checkbox" value="울산광역시" checked> 울산</label>
+        <label><input type="checkbox" value="경상남도" checked> 경남</label>
+      </div>
+
+      <label style="font-size:12px; margin: 6px 0 4px; color: var(--text);">업종 선택</label>
+      <div class="chkrow" id="excelIndustryFilter">
+        <label><input type="checkbox" value="일반음식점" checked> 일반음식점</label>
+        <label><input type="checkbox" value="휴게음식점" checked> 휴게음식점</label>
+        <label><input type="checkbox" value="이용업" checked> 이용업</label>
+        <label><input type="checkbox" value="미용업" checked> 미용업</label>
+        <label><input type="checkbox" value="약국" checked> 약국</label>
+        <label><input type="checkbox" value="병원" checked> 병원</label>
+        <label><input type="checkbox" value="의원" checked> 의원</label>
+      </div>
+      <button class="btn btn-secondary" id="extractExcelBtn" style="margin-top:10px; background:#0284c7;">📥 34~37개월 데이터 추출</button>
+    </div>
+
+    <div class="grp" style="background:#0d162a; padding:10px; border-radius:8px; border:1px solid var(--line);">
+      <label style="color:var(--ok); font-weight:600; margin-top:0;">🏢 담당 유통망(대리점) 매핑 설정</label>
+      
+      <div style="margin-bottom:6px;">
+        <select id="mapIndustry" style="width:100%; font-size:12px; margin-bottom:4px; background:#0b1220; color:#fff; border:1px solid var(--line); border-radius:6px; padding:6px;">
+          <option value="ALL">전체 업종 (지역 기준)</option>
+          <option value="병원,의원">병원,의원 전용</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:6px;">
+        <input type="text" id="mapDistrict" placeholder="구/동 (예: 부산진구 또는 ALL)" style="font-size:12px;">
+      </div>
+
+      <div style="margin-bottom:6px;">
+        <input type="text" id="mapEmail" placeholder="수신 이메일 (필수)" style="font-size:12px;">
+      </div>
+
+      <button class="btn btn-secondary" id="addBranchBtn" type="button" style="padding:6px; font-size:12px; margin-top:0;">+ 유통망 매핑 추가</button>
+      
+      <div id="branchList" style="margin-top:10px; max-height:130px; overflow-y:auto;">
+      </div>
+    </div>
+
+    <div class="grp">
+      <label>지역</label>
+      <div class="chkrow" id="regionFilter">
+        <label><input type="checkbox" value="부산광역시" checked> 부산</label>
+        <label><input type="checkbox" value="울산광역시" checked> 울산</label>
+        <label><input type="checkbox" value="경상남도" checked> 경남</label>
+      </div>
+    </div>
+
+    <div class="grp">
+      <label>업종</label>
+      <div class="chkrow" id="industryFilter">
+        <label><input type="checkbox" value="일반음식점" checked> 일반음식점</label>
+        <label><input type="checkbox" value="휴게음식점" checked> 휴게음식점</label>
+        <label><input type="checkbox" value="이용업" checked> 이용업</label>
+        <label><input type="checkbox" value="미용업" checked> 미용업</label>
+        <label><input type="checkbox" value="약국" checked> 약국</label>
+        <label><input type="checkbox" value="병원" checked> 병원</label>
+        <label><input type="checkbox" value="의원" checked> 의원</label>
+       </div>
+    </div>
+
+    <div class="grp">
+      <label>인허가일</label>
+      <div class="row">
+        <input type="date" id="fromDate">
+        <input type="date" id="toDate">
+      </div>
+    </div>
+
+    <button class="btn" id="apiFetchBtn">⚡ API 데이터 호출</button>
+    <button class="btn btn-secondary" id="cancelFetchBtn" style="display:none; background:#7f1d1d;">⏹ 호출 중단</button>
+    <button class="btn btn-secondary" id="resetFilterBtn">초기화</button>
+
+    <div class="grp" style="background:#0d162a; padding:10px; border-radius:8px; border:1px solid var(--line);">
+      <label style="color:var(--accent); font-weight:600; margin-top:0;">🔑 API Config 설정 상태</label>
+      <div style="margin-top:6px;"><span class="badge" id="configStatus">불러오는 중...</span></div>
+      <div class="hint" style="margin-top:6px;">로컬 PC의 config.json 파일에서 키값을 가져옵니다.</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="card">
+      <div class="hd">
+        <span>실시간 리드 데이터 관리</span>
+        <div style="display:flex; gap:6px;">
+          <button class="btn-action" id="batchScriptBtn">🚀 전체 AI 스크립트 생성</button>
+          <button class="btn-action" id="cancelBatchBtn" style="display:none; background:#7f1d1d;">⏹ 중단</button>
+          <button class="btn-action" id="openMailModalBtn" style="background:#2563eb;">📧 동별 유통망 메일 발송</button>
+          <button class="btn-excel" id="downloadExcelBtn">📥 엑셀 다운로드</button>
+        </div>
+      </div>
+      <div class="bd" style="border-bottom:1px solid var(--line);">
+        <input type="text" id="searchBox" placeholder="호출된 데이터에서 상호/주소/전화번호/동 검색" />
+        <div class="progress-wrap" id="fetchProgress">
+          <div class="progress-bar"><div id="fetchProgressBar"></div></div>
+          <div class="progress-text" id="fetchProgressText">대기 중…</div>
+        </div>
+        <div class="progress-wrap" id="batchProgress">
+          <div class="progress-bar"><div id="batchProgressBar"></div></div>
+          <div class="progress-text" id="batchProgressText">대기 중…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="card" style="min-height:480px;">
+        <div class="bd" style="padding:0;">
+          <div style="max-height:65vh; overflow:auto;">
+            <table class="table" id="leadTable">
+              <thead>
+                <tr>
+                  <th style="width:40px;">번호</th>
+                  <th style="width:160px;">상호</th>
+                  <th style="width:110px;">업종</th>
+                  <th style="width:80px;">지역</th>
+                  <th style="width:70px;">구/동</th>
+                  <th style="width:90px;">전화번호</th>
+                  <th style="width:85px;">인허가일</th>
+                  <th style="width:60px; text-align:center;">지도</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="8" style="text-align:center; padding:40px; color:var(--muted);">
+                    좌측 [API 데이터 호출] 또는 [34~37개월 데이터 추출] 버튼을 클릭해 주세요.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="bd">
+            <div class="statusbar">
+              <span id="countInfo" style="font-weight:600; font-size:14px; color:var(--accent);">총 0건</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card detail">
+        <div class="hd">상세 정보 및 AI 분석</div>
+        <div class="bd">
+          <div id="excelDateNotice" class="excel-date-banner">
+            📅 34~37개월 전 추출 범위: <span id="excelDateText">-</span>
+          </div>
+
+          <div id="detailInfo" class="muted">좌측에서 항목을 선택하세요.</div>
+          <div id="detailPane" style="display:none;">
+            <div style="margin-bottom:8px">
+              <div><span class="hl" id="dName">-</span> <span class="muted">|</span> <span id="dIndustry" class="muted">-</span></div>
+              <div class="muted" id="dAddr">-</div>
+              <div class="muted" style="margin-top: 4px;">전화번호: <span id="dTelno" style="color:#fff; font-weight:600;">-</span></div>
+              <div class="muted" style="margin-top: 2px;">인허가일: <span id="dPermit" style="color:var(--accent); font-weight:600;">-</span></div>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin: 12px 0 6px;">
+              <label style="margin:0;">🤖 LLM 맞춤형 분석</label>
+              <div style="display:flex; gap:6px;">
+                <button id="aiMarketBtn" style="padding:5px 10px; background:#8b5cf6; color:#fff; border:none; border-radius:6px; font-size:12px; cursor:pointer;">⚡ 상권분석</button>
+                <button id="aiGenerateBtn" style="padding:5px 10px; background:#10b981; color:#fff; border:none; border-radius:6px; font-size:12px; cursor:pointer;">⚡ 스크립트 생성</button>
+              </div>
+            </div>
+            <div class="script" id="dScript">버튼을 눌러 영업 스크립트 또는 상권 분석 결과를 확인하세요.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay" id="marketModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span id="modalTitle">📍 AI 상권 분석 리포트</span>
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      분석 데이터를 불러오는 중입니다...
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mailModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span>📧 유통망 대리점별 메일 발송 현황 미리보기</span>
+      <button class="modal-close" id="mailModalCloseBtn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-top:0; color:var(--muted);">현재 조회된 데이터를 설정된 구/동 기준에 맞춰 유통망 대리점별로 분류한 결과입니다.</p>
+      <div style="background:#0b1220; border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:10px;">
+        <div class="row">
+          <div>
+            <label style="margin-top:0;">메일 제목(앞부분)</label>
+            <input type="text" id="mailSubjectPrefix" value="[신규 인허가 영업 자동화] 담당 지역 영업 리드 안내" style="font-size:13px;" />
+          </div>
+        </div>
+        <label>메일 본문 미리보기 (첫 번째 수신자 기준, 상위 3건)</label>
+        <div class="script" id="mailPreview" style="background:#0b1220; border:1px solid var(--line); border-radius:8px; padding:10px; max-height:180px; overflow:auto; white-space:pre-wrap; font-size:12px;">수신자별 분류 후 표시됩니다.</div>
+      </div>
+      <table class="table" style="margin-top:10px;">
+        <thead>
+          <tr>
+            <th>구/동 구분</th>
+            <th>담당 유통망 이메일</th>	
+            <th>할당 건수</th>
+            <th>상태</th>
+          </tr>
+        </thead>
+        <tbody id="mailSummaryBody">
+        </tbody>
+      </table>
+      <div class="progress-wrap" id="mailProgress">
+        <div class="progress-bar"><div id="mailProgressBar"></div></div>
+        <div class="progress-text" id="mailProgressText">대기 중…</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancelMailBtn" style="width:auto; margin:0;">취소</button>
+      <button class="btn" id="confirmSendMailBtn" style="width:auto; margin:0; background:#2563eb;">🚀 이메일 일괄 발송 시작</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let CONFIG = {}; // config.json 설정 객체
+let leads = []; 
+let filtered = []; 
+let selectedId = null;
+let currentSelectedItem = null;
+
+// config.json 로드 함수
+async function loadConfigFile() {
+  const el = qs("#configStatus");
+  try {
+    const response = await fetch('./config.json');
+    if (!response.ok) throw new Error("config.json 파일을 찾을 수 없습니다.");
+    CONFIG = await response.json();
+    if (el) {
+      el.textContent = "config.json 로드 성공";
+      el.className = "badge ok";
+    }
+  } catch (error) {
+    console.warn("config.json 로드 실패:", error);
+    if (el) {
+      el.textContent = "config.json 로드 실패";
+      el.className = "badge err";
+    }
+  }
+}
+
+function openNaverMap(address, name) {
+  const searchQuery = (address && address.trim() !== '' && address.trim() !== '-') ? address : name;
+  const encodedQuery = encodeURIComponent(searchQuery);
+  const mapUrl = `https://map.naver.com/v5/search/${encodedQuery}`;
+  window.open(mapUrl, '_blank');
+}
+
+function extractDistrictOrCity(addr, regionName) {
+  if (!addr) return '-';
+  if (regionName === '경상남도' || addr.includes('경남') || addr.includes('경상남도')) {
+    const match = addr.match(/([가-힣]+(?:시|군))/);
+    return match ? match[1] : '-';
+  }
+  if (regionName === '부산광역시' || regionName === '울산광역시' || addr.includes('부산') || addr.includes('울산')) {
+    const match = addr.match(/([가-힣]+(?:구|군))/);
+    return match ? match[1] : '-';
+  }
+  const defaultMatch = addr.match(/([가-힣]+(?:시|구|군))/);
+  return defaultMatch ? defaultMatch[1] : '-';
+}
+
+function formatPhoneNumber(val) {
+  if (!val) return '-';
+  let str = String(val).replace(/[^\d]/g, '').trim();
+  if (!str) return '-';
+  if (str.length >= 9 && !str.startsWith('0')) str = '0' + str;
+  if (str.length === 8) return str.replace(/(\d{4})(\d{4})/, '$1-$2');
+  if (str.startsWith('02')) {
+    if (str.length === 9) return str.replace(/(\d{2})(\d{3})(\d{4})/, '$1-$2-$3');
+    if (str.length === 10) return str.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3');
+  }
+  if (str.length === 10) return str.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+  else if (str.length === 11) return str.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+  return String(val);
+}
+
+function parsePureStringDate(val) {
+  if (val === undefined || val === null || val === '') return { dateObj: null, strVal: '' };
+  let str = String(val).trim();
+  if (!isNaN(str) && Number(str) > 30000 && Number(str) < 60000) {
+    const jsDate = XLSX.SSF.parse_date_code(Number(str));
+    if (jsDate) {
+      const y = jsDate.y;
+      const m = jsDate.m - 1;
+      const d = jsDate.d;
+      const formattedStr = `${y}-${String(jsDate.m).padStart(2, '0')}-${String(jsDate.d).padStart(2, '0')}`;
+      return { dateObj: new Date(y, m, d), strVal: formattedStr };
+    }
+  }
+  const digitsOnly = str.replace(/[^\d]/g, '');
+  if (digitsOnly.length >= 8) {
+    const y = parseInt(digitsOnly.substring(0, 4), 10);
+    const m = parseInt(digitsOnly.substring(4, 6), 10) - 1;
+    const d = parseInt(digitsOnly.substring(6, 8), 10);
+    const dateObj = new Date(y, m, d);
+    const formattedStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    return { dateObj, strVal: formattedStr };
+  }
+  return { dateObj: null, strVal: str };
+}
+
+async function loadAndExtractExcelData() {
+  const selectedCategories = Array.from(document.querySelectorAll('#excelIndustryFilter input:checked')).map(cb => cb.value);
+  const selectedRegions = Array.from(document.querySelectorAll('#excelRegionFilter input:checked')).map(cb => cb.value);
+
+  if (selectedCategories.length === 0) { alert('업종을 1개 이상 선택해 주세요.'); return; }
+  if (selectedRegions.length === 0) { alert('지역을 1개 이상 선택해 주세요.'); return; }
+
+  const tb = qs("#leadTable tbody");
+  tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px;"><span class="spinner"></span> 34~37개월 전 데이터를 엑셀에서 추출 중입니다...</td></tr>`;
+
+  const today = new Date();
+  const startDateLimit = new Date(today.getFullYear(), today.getMonth() - 37, today.getDate());
+  const endDateLimit = new Date(today.getFullYear(), today.getMonth() - 34, today.getDate());
+  startDateLimit.setHours(0, 0, 0, 0);
+  endDateLimit.setHours(23, 59, 59, 999);
+
+  const startStr = startDateLimit.toISOString().slice(0, 10);
+  const endStr = endDateLimit.toISOString().slice(0, 10);
+
+  let excelRawData = [];
+
+  const fetchPromises = selectedCategories.map(async (category) => {
+    try {
+      const response = await fetch(`./data/${category}.xlsx`);
+      if (!response.ok) return null;
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false, raw: false });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+      json.forEach(r => r['_defaultCategory'] = category);
+      return json;
+    } catch (err) {
+      console.warn(`${category}.xlsx 로드 실패:`, err);
+      return null;
+    }
+  });
+
+  const results = await Promise.all(fetchPromises);
+  results.forEach(items => { if (items) excelRawData = excelRawData.concat(items); });
+
+  if (excelRawData.length === 0) {
+    alert('선택한 엑셀 파일 데이터를 로드할 수 없습니다.');
+    renderTable();
+    return;
+  }
+
+  const regionMap = {
+    '부산광역시': ['부산', '해운대', '부산진구', '동래', '남구', '북구', '금정', '사하', '연제', '수영', '사상', '기장', '영도', '중구', '서구', '강서구'],
+    '경상남도': ['경남', '경상남도', '창원', '진주', '통영', '사천', '김해', '밀양', '거제', '양산', '의령', '함안', '창녕', '고성', '남해', '하동', '산청', '함양', '거창', '합천'],
+    '울산광역시': ['울산', '울주']
+  };
+
+  let activeKeywords = [];
+  selectedRegions.forEach(reg => {
+    if (regionMap[reg]) {
+      activeKeywords = activeKeywords.concat(regionMap[reg]);
+    } else {
+      activeKeywords.push(reg);
+    }
+  });
+
+  const sampleRow = excelRawData[0] || {};
+  const actualKeys = Object.keys(sampleRow);
+
+  const findBestKey = (priorityList) => {
+    for (const target of priorityList) {
+      const found = actualKeys.find(k => k.trim() === target);
+      if (found) return found;
+    }
+    for (const target of priorityList) {
+      const found = actualKeys.find(k => {
+        const key = k.trim();
+        if (target.includes('주소') && key.includes('우편번호')) return false;
+        if (target.includes('업태') && (key.includes('일자') || key.includes('휴업'))) return false;
+        return key.includes(target);
+      });
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const detectedCols = {
+    name: findBestKey(['사업장명', '사업장명칭', '상호명', '상호', '사업장']),
+    type: findBestKey(['업태구분명', '업태구분', '업태명', '업태', '업종명', '업종', '위생업태명']),
+    date: findBestKey(['인허가일자', '인허가일', '허가일자']),
+    addr: findBestKey(['도로명전체주소', '도로명주소', '소재지전체주소', '소재지주소', '소재지', '주소']),
+    tel: findBestKey(['소재지전화', '전화번호', '연락처', '사업장전화번호'])
+  };
+
+  let extractedLeads = [];
+
+  const isBusanSelected = selectedRegions.includes('부산광역시');
+  const isGyeongnamSelected = selectedRegions.includes('경상남도');
+  const isUlsanSelected = selectedRegions.includes('울산광역시');
+
+  excelRawData.forEach((row, idx) => {
+    const name = String(detectedCols.name ? row[detectedCols.name] : '').trim();
+    const type = String(detectedCols.type ? row[detectedCols.type] : row['_defaultCategory']).trim();
+    const rawDate = detectedCols.date ? row[detectedCols.date] : '';
+    const addr = String(detectedCols.addr ? row[detectedCols.addr] : (row['도로명전체주소'] || row['소재지전체주소'] || row['주소'] || '')).trim();
+    const rawTel = detectedCols.tel ? row[detectedCols.tel] : '';
+
+    if (!addr) return;
+
+    let detectedRegion = '';
+    const isBusanAddr = addr.includes('부산');
+    const isUlsanAddr = addr.includes('울산') || addr.includes('울주');
+    const isGyeongnamAddr = addr.includes('경남') || addr.includes('경상남도') || addr.includes('창원') || addr.includes('김해') || addr.includes('양산') || addr.includes('진주') || addr.includes('거제');
+
+    if (isBusanAddr) detectedRegion = '부산광역시';
+    else if (isUlsanAddr) detectedRegion = '울산광역시';
+    else if (isGyeongnamAddr) detectedRegion = '경상남도';
+
+    if (isBusanSelected && !isUlsanSelected && isUlsanAddr) return;
+    if (isBusanSelected && !isGyeongnamSelected && isGyeongnamAddr) return;
+    if (isGyeongnamSelected && !isBusanSelected && isBusanAddr) return;
+    if (isGyeongnamSelected && !isUlsanSelected && isUlsanAddr) return;
+    if (isUlsanSelected && !isBusanSelected && isBusanAddr) return;
+    if (isUlsanSelected && !isGyeongnamSelected && isGyeongnamAddr) return;
+
+    const matchRegion = activeKeywords.some(keyword => addr.includes(keyword));
+    const { dateObj, strVal } = parsePureStringDate(rawDate);
+    
+    let matchDate = false;
+    if (dateObj && !isNaN(dateObj.getTime())) {
+      if (dateObj >= startDateLimit && dateObj <= endDateLimit) matchDate = true;
+    }
+
+    if (matchRegion && matchDate) {
+      extractedLeads.push({
+        id: `excel_${idx}_${Date.now()}`,
+        name: name || '명칭없음',
+        industry: type || row['_defaultCategory'],
+        originIndustryType: row['_defaultCategory'],
+        region: detectedRegion || (isBusanSelected ? '부산광역시' : (isUlsanSelected ? '울산광역시' : '경상남도')),
+        district: extractDistrictOrCity(addr, detectedRegion),
+        addr: addr,
+        telno: formatPhoneNumber(rawTel),
+        mobile: '-',
+        targetEmail: '',
+        permit_date: strVal,
+        lat: null, lng: null, aiScript: ''
+      });
+    }
+  });
+
+  leads = extractedLeads;
+
+  const noticeBox = qs("#excelDateNotice");
+  const noticeText = qs("#excelDateText");
+  if (noticeBox && noticeText) {
+    noticeText.textContent = `${startStr} ~ ${endStr}`;
+    noticeBox.style.display = "block";
+  }
+
+  applyFilters();
+}
+
+let branchMapList = JSON.parse(localStorage.getItem("BRANCH_MAP_LIST")) || [
+  { industry: "병원,의원", district: "ALL", email: "stkim92@sk.com" }, 
+  { industry: "ALL", district: "부산진구", email: "stkim92@sk.com" },
+  { industry: "ALL", district: "해운대구", email: "stkim92@sk.com" },
+  { industry: "ALL", district: "DEFAULT", email: "stkim92@sk.com" }
+];
+
+function renderBranchList() {
+  const container = qs("#branchList");
+  if (!container) return;
+  container.innerHTML = "";
+  
+  const grouped = {};
+  branchMapList.forEach((item) => {
+    if (!grouped[item.district]) grouped[item.district] = [];
+    grouped[item.district].push({ email: item.email, industry: item.industry });
+  });
+
+  for (const [district, list] of Object.entries(grouped)) {
+    const emails = list.map(l => l.email).join("; ");
+    const isHospital = list.some(l => ["병원,의원", "병원", "의원"].includes(l.industry));
+    const indTag = isHospital ? `<b style="color:var(--warn)">[병원]</b> ` : '';
+
+    const div = document.createElement("div");
+    div.className = "branch-item";
+    div.innerHTML = `
+      <span style="flex:1;">${indTag}<b>${district}</b> ➔ <span style="color:var(--accent)">${emails}</span></span>
+      ${district !== 'DEFAULT' ? `<span class="branch-del" onclick="removeBranchByDist('${district}')">&times;</span>` : ''}
+    `;
+    container.appendChild(div);
+  }
+  localStorage.setItem("BRANCH_MAP_LIST", JSON.stringify(branchMapList));
+}
+
+function matchBranchEmails(addr, district, originIndustryType) {
+  const fullAddr = addr || "";
+  const distStr = district || "";
+  const isHospitalType = ["병원", "의원", "병원,의원"].includes(originIndustryType);
+  let foundEmails = new Set();
+
+  branchMapList.forEach(b => {
+    const isHospitalCategory = ["병원,의원", "병원", "의원"].includes(b.industry);
+    const matchHospital = isHospitalType && isHospitalCategory;
+    const matchGeneral = !isHospitalType && !isHospitalCategory && b.district !== "DEFAULT";
+    
+    if (matchHospital || matchGeneral) {
+      if (b.district === "ALL" || distStr.includes(b.district) || fullAddr.includes(b.district)) {
+        foundEmails.add(b.email);
+      }
+    }
+  });
+
+  if (foundEmails.size === 0) {
+    const defaultRule = branchMapList.find(b => b.district === "DEFAULT");
+    if (defaultRule) foundEmails.add(defaultRule.email);
+  }
+  return Array.from(foundEmails);
+}
+
+function removeBranchByDist(district) {
+  if(!confirm(`'${district}'에 등록된 모든 유통망을 삭제하시겠습니까?`)) return;
+  branchMapList = branchMapList.filter(b => b.district !== district);
+  renderBranchList();
+  applyFilters();
+}
+
+function qs(s){return document.querySelector(s)}
+function qsa(s){return Array.from(document.querySelectorAll(s))}
+
+function loadSavedConfigs() {
+  const saved = localStorage.getItem("BRANCH_MAP_LIST");
+  if (saved) {
+    try { branchMapList = JSON.parse(saved); } catch(e) {}
+  }
+  renderBranchList();
+}
+
+function toast(msg, ms = 2600) {
+  const t = qs("#toast");
+  if (!t) { alert(msg); return; }
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.display = "none", ms);
+}
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+qs("#addBranchBtn").addEventListener("click", (e) => {
+  e.preventDefault();
+  const indEl = qs("#mapIndustry");
+  const distEl = qs("#mapDistrict");
+  const emailEl = qs("#mapEmail");
+
+  const ind = indEl ? indEl.value : "ALL";
+  const dist = distEl && distEl.value.trim() ? distEl.value.trim() : "ALL";
+  const email = emailEl ? emailEl.value.trim() : "";
+
+  if(!email) { alert("수신 이메일을 입력하세요."); return; }
+
+  branchMapList.unshift({ industry: ind, district: dist, email: email });
+
+  if(distEl) distEl.value = "";
+  if(emailEl) emailEl.value = "";
+
+  renderBranchList();
+  applyFilters();
+});
+
+let cancelFetchFlag = false;
+qs("#cancelFetchBtn")?.addEventListener("click", () => { cancelFetchFlag = true; });
+
+function setFetchProgress(pct, text) {
+  const wrap = qs("#fetchProgress"), bar = qs("#fetchProgressBar"), tx = qs("#fetchProgressText");
+  if (wrap) wrap.style.display = "block";
+  if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + "%";
+  if (tx) tx.textContent = text;
+}
+function hideFetchProgress() {
+  const wrap = qs("#fetchProgress");
+  if (wrap) wrap.style.display = "none";
+}
+
+// config.json의 PUBLIC_DATA_API_KEY를 사용하여 공공데이터포털 API 직접 호출
+async function fetchPublicData() {
+  const apiKey = CONFIG.PUBLIC_DATA_API_KEY;
+  if (!apiKey) {
+    alert("config.json 파일에 'PUBLIC_DATA_API_KEY'가 설정되어 있지 않습니다.");
+    return;
+  }
+
+  const noticeBox = qs("#excelDateNotice");
+  if (noticeBox) noticeBox.style.display = "none";
+
+  const selectedInds = qsa("#industryFilter input:checked").map(x => x.value);
+  if (selectedInds.length === 0) { alert("업종을 1개 이상 선택해 주세요."); return; }
+
+  const rawFrom = qs("#fromDate").value;
+  const rawTo = qs("#toDate").value;
+
+  if (!rawFrom || !rawTo) {
+    alert("인허가일자 검색 시작일과 종료일을 지정해 주세요.");
+    return;
+  }
+
+  const fromClean = rawFrom.replace(/-/g, "");
+  const endDateObj = new Date(rawTo);
+  endDateObj.setDate(endDateObj.getDate() + 1);
+  const ltClean = endDateObj.toISOString().slice(0, 10).replace(/-/g, "");
+
+  const tb = qs("#leadTable tbody");
+  tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px;"><span class="spinner"></span> 공공데이터포털에서 데이터를 수집 중입니다...</td></tr>`;
+
+  cancelFetchFlag = false;
+  const cancelBtn = qs("#cancelFetchBtn");
+  const apiBtn = qs("#apiFetchBtn");
+  if (cancelBtn) cancelBtn.style.display = "block";
+  if (apiBtn) apiBtn.disabled = true;
+  setFetchProgress(2, "조회 시작…");
+
+  let allFetchedData = [];
+  const seenKeys = new Set();
+  let doneCats = 0;
+
+  async function fetchOneCategory(indName) {
+    let pageNo = 1;
+    const catRows = [];
+    while (pageNo <= 10) {
+      if (cancelFetchFlag) break;
+      try {
+        const url = `https://apis.data.go.kr/1360000/v1/getPublicData?serviceKey=${encodeURIComponent(apiKey)}&pageNo=${pageNo}&numOfRows=100&type=json&fromDate=${fromClean}&toDate=${ltClean}`;
+        const response = await fetch(url);
+        if (!response.ok) break;
+        const res = await response.json();
+
+        let rawItems = res.response?.body?.items?.item || res.body?.items || res.items;
+        let rows = Array.isArray(rawItems) ? rawItems : (rawItems ? [rawItems] : []);
+        if (rows.length === 0) break;
+
+        rows.forEach((item, index) => {
+          const rawAddr = item.ROAD_NM_ADDR || item.LOTNO_ADDR || item.SITE_ADDR || "";
+          const tokens = rawAddr.trim().split(/\s+/);
+          const district = tokens[1] || "-";
+          const dedupKey = (item.MNG_NO || "") + "|" + (item.BPLC_NM || item.NAME || "") + "|" + rawAddr;
+          if (seenKeys.has(dedupKey)) return;
+          seenKeys.add(dedupKey);
+          catRows.push({
+            id: `${indName}_p${pageNo}_${index}_${item.MNG_NO || index}_${Date.now()}`,
+            name: item.BPLC_NM || item.NAME || "상호미표시",
+            industry: `${item.BZSTAT_SE_NM || '미분류'} (${indName})`,
+            originIndustryType: indName,
+            region: tokens[0] || "기타지역",
+            district: district,
+            addr: rawAddr,
+            telno: formatPhoneNumber(item.TELNO || item.SITE_TEL || item.LOCAL_TELNO || item.TEL || "-"),
+            mobile: item.HP || item.MOBILE || "-",
+            targetEmail: "",
+            permit_date: parsePermitDate(item),
+            lat: item.Y || item.LAT || null,
+            lng: item.X || item.LNG || null,
+            aiScript: ""
+          });
+        });
+
+        if (rows.length < 100) break;
+        pageNo++;
+        await sleep(300);
+      } catch (e) {
+        console.warn(indName + " " + pageNo + "p 실패:", e);
+        break;
+      }
+    }
+    doneCats++;
+    setFetchProgress(2 + Math.round(doneCats / selectedInds.length * 96), `${doneCats}/${selectedInds.length} 업종 완료 (${indName}: ${catRows.length}건)`);
+    return catRows;
+  }
+
+  try {
+    for (const cat of selectedInds) {
+      if (cancelFetchFlag) break;
+      const rows = await fetchOneCategory(cat);
+      allFetchedData = allFetchedData.concat(rows);
+    }
+
+    leads = allFetchedData;
+    applyFilters();
+    setFetchProgress(100, cancelFetchFlag ? "사용자 중단 (" + leads.length + "건)" : "완료 (" + leads.length + "건)");
+    toast(cancelFetchFlag ? `중단됨. 현재까지 ${leads.length}건 수집` : `총 ${leads.length}건의 API 데이터 조회가 완료되었습니다.`);
+  } catch (err) {
+    console.error("API 데이터 호출 오류:", err);
+    alert("데이터 호출 중 오류가 발생했습니다: " + err.message);
+  } finally {
+    if (cancelBtn) cancelBtn.style.display = "none";
+    if (apiBtn) apiBtn.disabled = false;
+    setTimeout(hideFetchProgress, 2500);
+  }
+}
+
+function getCleanDateString(raw) {
+  if (!raw) return "";
+  const digits = String(raw).replace(/[^0-9]/g, "");
+  return digits.length >= 8 ? digits.substring(0, 8) : "";
+}
+
+function parsePermitDate(item) {
+  let rawDate = item.LCPMT_YMD || item.PERMIT_DATE || item.PNT_YMD || item.AUTH_DATE || item.LCPMT_DATE || item.CHG_YMD || item.DAT_UPDT_PNT || "";
+  const clean = getCleanDateString(rawDate);
+  if (clean.length === 8) {
+    return `${clean.substring(0,4)}-${clean.substring(4,6)}-${clean.substring(6,8)}`;
+  }
+  return "날짜미상";
+}
+
+function applyFilters() {
+  let result = [...leads];
+
+  const selectedRegions = qsa("#regionFilter input:checked").map(x => x.value);
+  const selectedInds = qsa("#industryFilter input:checked").map(x => x.value);
+  const keyword = qs("#searchBox").value.trim().toLowerCase();
+  
+  const fromClean = getCleanDateString(qs("#fromDate").value);
+  const toClean = getCleanDateString(qs("#toDate").value);
+
+  result = result.filter(item => {
+    const matchReg = selectedRegions.length === 0 || selectedRegions.some(reg => {
+      const fullText = (item.region + " " + item.addr).toLowerCase();
+      if (reg.includes("경남") || reg.includes("경상남도")) return fullText.includes("경남") || fullText.includes("경상남도");
+      if (reg.includes("부산")) return fullText.includes("부산");
+      if (reg.includes("울산")) return fullText.includes("울산");
+      return fullText.includes(reg.toLowerCase());
+    });
+
+    const matchInd = selectedInds.length === 0 || selectedInds.some(ind => 
+      item.originIndustryType.includes(ind) || item.industry.includes(ind)
+    );
+
+    const matchKw = !keyword || 
+      item.name.toLowerCase().includes(keyword) || 
+      item.addr.toLowerCase().includes(keyword) || 
+      item.telno.toLowerCase().includes(keyword) || 
+      item.district.toLowerCase().includes(keyword);
+
+    let matchDate = true;
+    const isExcelData = item.id && item.id.startsWith("excel_");
+
+    if (!isExcelData && fromClean && toClean) {
+      const itemDateClean = getCleanDateString(item.permit_date);
+      if (itemDateClean.length === 8) {
+        matchDate = (itemDateClean >= fromClean && itemDateClean <= toClean);
+      }
+    }
+
+    return matchReg && matchInd && matchKw && matchDate;
+  });
+
+  const emailFunc = (typeof matchBranchEmails === 'function') ? matchBranchEmails : null;
+  result.forEach(item => {
+    if (emailFunc) {
+      item.targetEmail = emailFunc(item.addr, item.district, item.originIndustryType);
+    }
+  });
+
+  filtered = result;
+  renderTable();
+}
+
+function renderTable(){
+  const tb = qs("#leadTable tbody");
+  tb.innerHTML = "";
+  
+  if (filtered.length === 0) {
+    tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px; color:var(--muted);">조회 조건과 일치하는 데이터가 없습니다.</td></tr>`;
+    qs("#countInfo").textContent = "총 0건";
+    return;
+  }
+
+  filtered.forEach((item, idx)=>{
+    const tr = document.createElement("tr");
+    if(selectedId === item.id) tr.classList.add("selected");
+    
+    const safeAddr = (item.addr || '').replace(/'/g, "\\'");
+    const safeName = (item.name || '').replace(/'/g, "\\'");
+
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td><strong style="color:var(--accent); font-weight:normal;">${item.name}</strong></td>
+      <td>${item.industry}</td>
+      <td>${item.region}</td>
+      <td>${item.district}</td>
+      <td>${item.telno}</td>
+      <td>${item.permit_date}</td>
+      <td style="text-align:center;">
+        <button onclick="event.stopPropagation(); openNaverMap('${safeAddr}', '${safeName}')" class="btn-map">지도</button>
+      </td>
+    `;
+
+    tr.addEventListener("click", () => {
+      selectedId = item.id;
+      qsa("#leadTable tbody tr").forEach(r => r.classList.remove("selected"));
+      tr.classList.add("selected");
+      renderDetail(item.id);
+    });
+
+    tb.appendChild(tr);
+  });
+  qs("#countInfo").textContent = `총 ${filtered.length}건`;
+}
+
+function renderDetail(id){
+  const item = leads.find(x=>x.id===id);
+  if(!item) return;
+
+  currentSelectedItem = item;
+  qs("#detailInfo").style.display="none";
+  qs("#detailPane").style.display="block";
+  qs("#dName").textContent = item.name;
+  qs("#dIndustry").textContent = item.industry;
+  qs("#dAddr").textContent = item.addr;
+  qs("#dTelno").textContent = item.telno;
+  qs("#dPermit").textContent = item.permit_date;
+  qs("#dScript").textContent = item.aiScript || "버튼을 눌러 영업 스크립트 또는 상권 분석 결과를 확인하세요.";
+}
+
+// config.json의 GEMINI_API_KEY를 참조하여 Gemini API 직접 호출
+qs("#aiGenerateBtn").addEventListener("click", async () => {
+  if (!currentSelectedItem) { alert("대상을 선택해 주세요."); return; }
+  const geminiKey = CONFIG.GEMINI_API_KEY;
+  if (!geminiKey) {
+    alert("config.json 파일에 'GEMINI_API_KEY'가 설정되어 있지 않습니다.");
+    return;
+  }
+
+  const scriptBox = qs("#dScript");
+  scriptBox.innerHTML = `<span class="spinner"></span> Gemini AI 영업 스크립트 생성 중...`;
+
+  try {
+    const promptText = `상호명: ${currentSelectedItem.name}, 업종: ${currentSelectedItem.industry}, 위치: ${currentSelectedItem.addr}. 이 매장에 맞는 맞춤형 B2B 영업 스크립트를 작성해줘.`;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }]
+      })
+    });
+
+    const data = await response.json();
+    if (data.candidates && data.candidates[0].content.parts[0].text) {
+      const generatedText = data.candidates[0].content.parts[0].text;
+      currentSelectedItem.aiScript = generatedText;
+      scriptBox.textContent = generatedText;
+    } else {
+      scriptBox.textContent = "❌ AI 스크립트 생성에 실패했습니다.";
+    }
+  } catch (e) {
+    console.error("Gemini API Error:", e);
+    scriptBox.textContent = `❌ 생성 실패: ${e.message}`;
+  }
+});
+
+const marketModal = qs("#marketModal");
+const modalBody = qs("#modalBody");
+const modalTitle = qs("#modalTitle");
+
+qs("#aiMarketBtn").addEventListener("click", async () => {
+  if (!currentSelectedItem) { alert("대상을 먼저 선택해 주세요."); return; }
+  const geminiKey = CONFIG.GEMINI_API_KEY;
+  if (!geminiKey) {
+    alert("config.json 파일에 'GEMINI_API_KEY'가 설정되어 있지 않습니다.");
+    return;
+  }
+
+  modalTitle.textContent = `📍 [${currentSelectedItem.name}] 상권 분석 심층 리포트`;
+  modalBody.innerHTML = `<span class="spinner"></span> Gemini AI 상권 분석 리포트 작성 중...`;
+  marketModal.style.display = "flex";
+
+  try {
+    const promptText = `상호명: ${currentSelectedItem.name}, 업종: ${currentSelectedItem.industry}, 위치: ${currentSelectedItem.addr}. 이 매장의 위치 및 업종 기반 상권 분석 리포트를 작성해줘.`;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }]
+      })
+    });
+
+    const data = await response.json();
+    if (data.candidates && data.candidates[0].content.parts[0].text) {
+      modalBody.textContent = data.candidates[0].content.parts[0].text;
+    } else {
+      modalBody.textContent = "❌ 상권 분석 리포트 생성 실패";
+    }
+  } catch (e) {
+    modalBody.textContent = `❌ 상권 분석 실패: ${e.message}`;
+  }
+});
+
+qs("#modalCloseBtn").addEventListener("click", () => marketModal.style.display = "none");
+marketModal.addEventListener("click", (e) => { if (e.target === marketModal) marketModal.style.display = "none"; });
+
+function downloadExcel() {
+  if (filtered.length === 0) { alert("다운로드할 데이터가 없습니다."); return; }
+
+  let csvContent = "\uFEFF";
+  csvContent += "번호,상호,업종,지역,구/동,전화번호(TELNO),인허가일,전체주소,AI영업스크립트\n";
+
+  filtered.forEach((item, index) => {
+    const cleanScript = String(item.aiScript || "미생성").replace(/"/g, '""');
+    const row = [
+      index + 1,
+      `"${String(item.name || "").replace(/"/g, '""')}"`,
+      `"${String(item.industry || "").replace(/"/g, '""')}"`,
+      `"${String(item.region || "")}"`,
+      `"${String(item.district || "")}"`,
+      `"${String(item.telno || "")}"`,
+      `"${String(item.permit_date || "")}"`,
+      `"${String(item.addr || "").replace(/"/g, '""')}"`,
+      `"${cleanScript}"`
+    ];
+    csvContent += row.join(",") + "\n";
+  });
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const today = new Date().toISOString().slice(0, 10);
+  link.setAttribute("href", url);
+  link.setAttribute("download", `신규인허가_리드목록_${today}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+qs("#searchBox").addEventListener("input", applyFilters);
+qsa("#regionFilter input").forEach(chk => chk.addEventListener("change", applyFilters));
+qsa("#industryFilter input").forEach(chk => chk.addEventListener("change", applyFilters));
+qs("#fromDate").addEventListener("change", applyFilters);
+qs("#toDate").addEventListener("change", applyFilters);
+qs("#apiFetchBtn").addEventListener("click", fetchPublicData);
+qs("#extractExcelBtn").addEventListener("click", loadAndExtractExcelData);
+qs("#downloadExcelBtn").addEventListener("click", downloadExcel);
+
+qs("#resetFilterBtn").addEventListener("click", () => {
+  leads = [];
+  filtered = [];
+  selectedId = null;
+  currentSelectedItem = null;
+
+  qsa("#regionFilter input").forEach(x => x.checked = true);
+  qsa("#industryFilter input").forEach(x => x.checked = true);
+
+  initDates();
+
+  qs("#searchBox").value = "";
+
+  const noticeBox = qs("#excelDateNotice");
+  if (noticeBox) noticeBox.style.display = "none";
+
+  qs("#detailInfo").style.display = "block";
+  qs("#detailPane").style.display = "none";
+
+  renderTable();
+});
+
+function initDates(){
+  const today = new Date();
+  qs("#toDate").value = today.toISOString().slice(0,10);
+  qs("#fromDate").value = new Date(today.getTime()-6*86400000).toISOString().slice(0,10);
+}
+
+// 초기화 실행
+loadConfigFile();
+initDates();
+loadSavedConfigs();
+</script>
+</body>
+</html>
