@@ -870,7 +870,7 @@ async function fetchPublicDirect(category, fromDate, ltDate, pageNo) {
   return { status: "success", data: json };
 }
 
-const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-flash-lite", "gemini-3.1-flash-lite"];
 
 // Gemini 직접 호출 (GAS callGeminiWithFallback 대체)
 async function callGeminiDirect(prompt, timeoutMs = 60000) {
