@@ -847,16 +847,18 @@ const PUBLIC_ENDPOINTS = {
 };
 
 // 공공데이터 직접 호출 (GAS handlePublicDataFetch 대체)
-async function fetchPublicDirect(category, fromDate, ltDate, pageNo) {
+// addrLike: 공식 문서의 cond[ROAD_NM_ADDR::LIKE] 서버 지역필터 (예: "부산", "경상남도")
+async function fetchPublicDirect(category, fromDate, ltDate, pageNo, addrLike) {
   const apiKey = getPublicKey();
   if (!apiKey) throw new Error("공공데이터 API Key가 없습니다. [📂 config.json 불러오기]로 키를 적재하세요.");
   const baseUrl = PUBLIC_ENDPOINTS[category];
   if (!baseUrl) throw new Error("유효하지 않은 업종입니다: " + category);
   const keyOrEncoded = apiKey.includes("%") ? apiKey : encodeURIComponent(apiKey);
-  const url = baseUrl + "?serviceKey=" + keyOrEncoded +
+  let url = baseUrl + "?serviceKey=" + keyOrEncoded +
     "&pageNo=" + pageNo + "&numOfRows=100&returnType=json" +
     "&" + encodeURIComponent("cond[LCPMT_YMD::GTE]") + "=" + fromDate +
     "&" + encodeURIComponent("cond[LCPMT_YMD::LT]") + "=" + ltDate;
+  if (addrLike) url += "&" + encodeURIComponent("cond[ROAD_NM_ADDR::LIKE]") + "=" + encodeURIComponent(addrLike);
   let res;
   try {
     res = await fetchWithTimeout(url, {}, 60000);
@@ -966,13 +968,18 @@ function hideFetchProgress() {
 }
 
 // 업종별 1회 호출 + 업종간 병렬(동시 4) + 페이지 순차 + 중복제거
-// 기존처럼 시군구 코드별 반복 호출(백엔드가 regionCode를 무시해 중복 조회되던 문제)을 제거해 약 1/39 수준으로 호출량을 줄였습니다.
+// + 서버 지역필터(cond[ROAD_NM_ADDR::LIKE]): 이전에는 전국 데이터를 받아와 클라이언트에서만 걸러서
+// 수집 건수와 표시 건수가 어긋나고(예: 수집 12건 → 표시 2건) 타지역 1페이지만 보고 끊기는 문제가 있었음
+const REGION_LIKE_MAP = { '부산광역시': '부산', '울산광역시': '울산', '경상남도': '경상남도' };
 async function fetchPublicData() {
   const noticeBox = qs("#excelDateNotice");
   if (noticeBox) noticeBox.style.display = "none";
 
   const selectedInds = qsa("#industryFilter input:checked").map(x => x.value);
   if (selectedInds.length === 0) { alert("업종을 1개 이상 선택해 주세요."); return; }
+  const selectedRegions = qsa("#regionFilter input:checked").map(x => x.value);
+  const addrLikes = selectedRegions.map(r => REGION_LIKE_MAP[r]).filter(Boolean);
+  const likeList = addrLikes.length > 0 ? addrLikes : [null];
 
   const rawFrom = qs("#fromDate").value;
   const rawTo = qs("#toDate").value;
@@ -1006,11 +1013,13 @@ async function fetchPublicData() {
   async function fetchOneCategory(indName) {
     let pageNo = 1;
     const catRows = [];
-    while (pageNo <= MAX_PAGES) {
+    for (const like of likeList) {
+      pageNo = 1;
+      while (pageNo <= MAX_PAGES) {
       if (cancelFetchFlag) break;
       let res;
       try {
-        res = await withRetry(() => fetchPublicDirect(indName, fromClean, ltClean, pageNo), { maxRetry: 2, baseDelay: 1000, timeoutMs: 60000 });
+        res = await withRetry(() => fetchPublicDirect(indName, fromClean, ltClean, pageNo, like), { maxRetry: 2, baseDelay: 1000, timeoutMs: 60000 });
       } catch (e) {
         console.warn(indName + " " + pageNo + "p 실패:", e);
         break;
@@ -1051,6 +1060,8 @@ async function fetchPublicData() {
       if (rows.length < 100) break;
       pageNo++;
       await sleep(300);
+      }
+      if (cancelFetchFlag) break;
     }
     doneCats++;
     setFetchProgress(2 + Math.round(doneCats / selectedInds.length * 96), `${doneCats}/${selectedInds.length} 업종 완료 (${indName}: ${catRows.length}건)`);
@@ -1072,8 +1083,8 @@ async function fetchPublicData() {
 
     leads = allFetchedData;
     applyFilters();
-    setFetchProgress(100, cancelFetchFlag ? "사용자 중단 (" + leads.length + "건)" : "완료 (" + leads.length + "건)");
-    toast(cancelFetchFlag ? `중단됨. 현재까지 ${leads.length}건 수집` : `총 ${leads.length}건의 API 데이터 조회가 완료되었습니다.`);
+    setFetchProgress(100, cancelFetchFlag ? "사용자 중단 (" + leads.length + "건)" : "완료 (수집 " + leads.length + "건 → 표시 " + filtered.length + "건)");
+    toast(cancelFetchFlag ? `중단됨. 수집 ${leads.length}건 중 ${filtered.length}건 표시` : `수집 ${leads.length}건 → 조건 적용 후 ${filtered.length}건 표시됩니다.`);
   } catch (err) {
     console.error("API 데이터 호출 오류:", err);
     alert("데이터 호출 중 오류가 발생했습니다: " + err.message);
@@ -1165,23 +1176,24 @@ function renderTable(){
   filtered.forEach((item, idx)=>{
     const tr = document.createElement("tr");
     if(selectedId === item.id) tr.classList.add("selected");
-    
-    const safeAddr = (item.addr || '').replace(/'/g, "\\'");
-    const safeName = (item.name || '').replace(/'/g, "\\'");
 
     tr.innerHTML = `
       <td>${idx+1}</td>
-      <td><strong style="color:var(--accent); font-weight:normal;">${item.name}</strong></td>
-      <td>${item.industry}</td>
-      <td>${item.region}</td>
-      <td>${item.district}</td>
-      <td>${item.telno}</td>
-      <td>${item.permit_date}</td>
+      <td><strong style="color:var(--accent); font-weight:normal;">${escHtml(item.name)}</strong></td>
+      <td>${escHtml(item.industry)}</td>
+      <td>${escHtml(item.region)}</td>
+      <td>${escHtml(item.district)}</td>
+      <td>${escHtml(item.telno)}</td>
+      <td>${escHtml(item.permit_date)}</td>
       <td style="text-align:center;">
-        <button onclick="event.stopPropagation(); openNaverMap('${safeAddr}', '${safeName}')" class="btn-map">지도</button>
+        <button class="btn-map">지도</button>
       </td>
     `;
 
+    tr.querySelector(".btn-map").addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      openNaverMap(item.addr, item.name);
+    });
     tr.addEventListener("click", () => {
       selectedId = item.id;
       qsa("#leadTable tbody tr").forEach(r => r.classList.remove("selected"));
@@ -1191,7 +1203,7 @@ function renderTable(){
 
     tb.appendChild(tr);
   });
-  qs("#countInfo").textContent = `총 ${filtered.length}건`;
+  qs("#countInfo").textContent = `총 ${filtered.length}건 (수집 ${leads.length}건)`;
 }
 
 function renderDetail(id){
