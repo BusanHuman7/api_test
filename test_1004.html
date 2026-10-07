@@ -356,7 +356,7 @@
             <input type="text" id="mailSubjectPrefix" value="[신규 인허가 영업 자동화] 담당 지역 영업 리드 안내" style="font-size:13px;" />
           </div>
         </div>
-        <label>메일 본문 미리보기 (첫 번째 수신자 기준, 상위 3건)</label>
+        <label>메일 본문 미리보기 (첫 번째 수신자 기준, 실제 발송 표와 동일)</label>
         <div class="script" id="mailPreview" style="background:#0b1220; border:1px solid var(--line); border-radius:8px; padding:10px; max-height:180px; overflow:auto; white-space:pre-wrap; font-size:12px;">수신자별 분류 후 표시됩니다.</div>
         <div style="margin-top:6px;"><span class="badge" id="mailModeBadge">relay 모드</span> <span class="hint" id="mailModeHint">릴레이 서버 경유로 From 주소 그대로 발송됩니다.</span></div>
       </div>
@@ -1367,6 +1367,47 @@ function buildMailBody(items, maxItems = 3) {
   return body;
 }
 
+function escHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// 메일 표 형태 HTML 본문 (릴레이 서버가 html 필드로 발송, text는 폴백용)
+function buildMailHtml(items) {
+  const cell = "border:1px solid #cbd5e1; padding:6px 8px; font-size:13px; color:#1e293b;";
+  const head = "border:1px solid #cbd5e1; padding:6px 8px; font-size:13px; background:#1e3a8a; color:#ffffff;";
+  const rows = items.map((item, idx) => {
+    let r = "<tr>"
+      + `<td style="${cell}; text-align:center;">${idx + 1}</td>`
+      + `<td style="${cell}"><b>${escHtml(item.name)}</b></td>`
+      + `<td style="${cell}">${escHtml(item.industry)}</td>`
+      + `<td style="${cell}">${escHtml(item.addr)}</td>`
+      + `<td style="${cell}; white-space:nowrap;">${escHtml(item.telno)}</td>`
+      + `<td style="${cell}; white-space:nowrap;">${escHtml(item.permit_date)}</td>`
+      + "</tr>";
+    if (item.aiScript) {
+      r += `<tr><td colspan="6" style="${cell} background:#f1f5f9;"><b>AI 영업 스크립트</b><br/>${escHtml(item.aiScript).replace(/\n/g, "<br/>")}</td></tr>`;
+    }
+    return r;
+  }).join("");
+  return `<div style="font-family:Arial,sans-serif; font-size:14px; color:#1e293b;">`
+    + `<p>안녕하세요, 담당 유통망 담당자님.<br/>신규 인허가 영업 리드 목록을 전달드립니다. (총 ${items.length}건)</p>`
+    + `<table style="border-collapse:collapse; width:100%;">`
+    + `<tr><th style="${head}">번호</th><th style="${head}">상호</th><th style="${head}">업종</th>`
+    + `<th style="${head}">주소</th><th style="${head}">전화번호</th><th style="${head}">인허가일</th></tr>`
+    + rows + "</table></div>";
+}
+
+// 미리보기 렌더 (실제 발송 HTML과 동일 내용)
+function renderMailPreview() {
+  const box = qs("#mailPreview");
+  const entries = Object.entries(buildGroupedLeads()).filter(([e]) => e !== "미지정" && e.includes("@"));
+  const first = entries[0];
+  if (!first) { box.textContent = "유효한 수신자가 없습니다. 유통망 매핑을 확인해 주세요."; return; }
+  const subj = qs("#mailSubjectPrefix").value + " (" + first[1].length + "건)";
+  box.innerHTML = `<div style="margin-bottom:8px; font-size:12px;">To: <b>${escHtml(first[0])}</b><br/>Subject: <b>${escHtml(subj)}</b></div>`
+    + buildMailHtml(first[1]);
+}
+
 qs("#openMailModalBtn").addEventListener("click", () => {
   if (filtered.length === 0) { alert("발송할 데이터가 없습니다."); return; }
 
@@ -1379,11 +1420,8 @@ qs("#openMailModalBtn").addEventListener("click", () => {
     const bad = email === "미지정" || !email.includes("@");
     tbody.innerHTML += `<tr><td>대리점</td><td><b>${email}</b></td><td>${items.length}건</td><td>${bad ? '<span class="badge warn">제외됨</span>' : '대기'}</td></tr>`;
   }
-  // 미리보기
-  const firstValid = entries.find(([e]) => e !== "미지정" && e.includes("@"));
-  qs("#mailPreview").textContent = firstValid
-    ? `To: ${firstValid[0]}\nSubject: ${qs("#mailSubjectPrefix").value} (${firstValid[1].length}건)\n\n` + buildMailBody(firstValid[1])
-    : "유효한 수신자가 없습니다. 유통망 매핑을 확인해 주세요.";
+  // 미리보기 (첫 번째 수신자 기준, 실제 발송 HTML과 동일)
+  renderMailPreview();
   const mp = qs("#mailProgress"); if (mp) mp.style.display = "none";
   mailModal.style.display = "flex";
 });
@@ -1456,6 +1494,7 @@ async function sendViaRelay(toEmail, items, sender, subjectPrefix) {
     fromName: sender.fromName || "",
     subject: subjectPrefix + " (" + items.length + "건)",
     body: buildMailBody(items, items.length),
+    html: buildMailHtml(items),
     key: sender.relayKey || ""
   };
   let res;
@@ -1521,8 +1560,7 @@ qs("#testSenderBtn")?.addEventListener("click", async () => {
 qs("#senderMode")?.addEventListener("change", (e) => { if (qs("#mailSendMode")) qs("#mailSendMode").value = e.target.value; updateMailModeUI(); });
 qs("#mailSendMode")?.addEventListener("change", (e) => { if (qs("#senderMode")) qs("#senderMode").value = e.target.value; updateMailModeUI(); });
 qs("#mailSubjectPrefix")?.addEventListener("input", () => {
-  const firstValid = Object.entries(buildGroupedLeads()).find(([e]) => e !== "미지정" && e.includes("@"));
-  if (firstValid) qs("#mailPreview").textContent = `To: ${firstValid[0]}\nSubject: ${qs("#mailSubjectPrefix").value} (${firstValid[1].length}건)\n\n` + buildMailBody(firstValid[1]);
+  renderMailPreview();
 });
 qs("#resetFilterBtn").addEventListener("click", () => {
   leads = [];
