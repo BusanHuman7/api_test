@@ -1224,7 +1224,7 @@ function renderDetail(id){
 qs("#aiGenerateBtn").addEventListener("click", async () => {
   if (!currentSelectedItem) { alert("대상을 선택해 주세요."); return; }
   const scriptBox = qs("#dScript");
-  scriptBox.innerHTML = `<span class="spinner"></span> Gemini 직접 호출로 스크립트 생성 중... (503 시 자동 재시도)`;
+  scriptBox.innerHTML = `<span class="spinner"></span> Gemini 직접 호출로 스크립트 생성 중...`;
 
   try {
     const res = await withRetry(() => callGeminiDirect(buildScriptPrompt(currentSelectedItem)), { maxRetry: 4, baseDelay: 2000 });
@@ -1250,7 +1250,7 @@ const modalTitle = qs("#modalTitle");
 qs("#aiMarketBtn").addEventListener("click", async () => {
   if (!currentSelectedItem) { alert("대상을 먼저 선택해 주세요."); return; }
   modalTitle.textContent = `📍 [${currentSelectedItem.name}] 상권 분석 심층 리포트`;
-  modalBody.innerHTML = `<span class="spinner"></span> 실시간 상권 분석 리포트 작성 중... (503 시 자동 재시도)`;
+  modalBody.innerHTML = `<span class="spinner"></span> 실시간 상권 분석 리포트 작성 중...`;
   marketModal.style.display = "flex";
 
   try {
@@ -1282,7 +1282,7 @@ qs("#batchScriptBtn").addEventListener("click", async () => {
   // 이미 생성된 항목은 건너뛰기
   const targets = filtered.filter(x => !x.aiScript || x.aiScript.length < 10);
   if (targets.length === 0) { toast("이미 모든 항목에 스크립트가 있습니다."); return; }
-  if (!confirm(`미생성 ${targets.length}건에 대해 스크립트를 생성합니다. (동시 3건 + 503 자동재시도)\n계속할까요?`)) return;
+  if (!confirm(`미생성 ${targets.length}건에 대해 스크립트를 생성합니다. \n계속할까요?`)) return;
 
   const scriptBox = qs("#dScript");
   qs("#detailPane").style.display = "block";
