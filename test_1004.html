@@ -1511,6 +1511,8 @@ async function sendViaRelay(toEmail, items, sender, subjectPrefix) {
     subject: subjectPrefix + " (" + items.length + "건)",
     body: buildMailBody(items, items.length),
     html: buildMailHtml(items),
+	user: sender.relayUser || "",  // SMTP ID 전달
+    pass: sender.relayPass || "",  // SMTP Password 전달
     key: sender.relayKey || ""
   };
   let res;
@@ -1557,7 +1559,6 @@ function collectSenderForm() {
   };
 }
 
-/
 
 qs("#saveSenderBtn")?.addEventListener("click", () => {
   const s = collectSenderForm();
