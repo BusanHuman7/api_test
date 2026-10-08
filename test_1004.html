@@ -694,7 +694,8 @@ function loadSavedConfigs() {
   if (qs("#senderName")) qs("#senderName").value = sc.fromName || "";
   if (qs("#senderEmail")) qs("#senderEmail").value = sc.fromEmail || "";
   if (qs("#relayUrl")) qs("#relayUrl").value = sc.relayUrl || "";
-  if (qs("#relayKey")) qs("#relayKey").value = sc.relayKey || "";
+  if (qs("#relayUser")) qs("#relayUser").value = sc.relayUser || "";
+  if (qs("#relayPass")) qs("#relayPass").value = sc.relayPass || "";
   if (qs("#mailSendMode")) qs("#mailSendMode").value = normalizeMode(sc.mode);
   updateMailModeUI();
 }
@@ -1556,10 +1557,7 @@ function collectSenderForm() {
   };
 }
 
-// 3. 페이지 로드 시 기존 저장값 불러오기 수정 (loadSavedConfigs 함수 내부)
-// loadSavedConfigs() 함수 안에 아래 2줄을 추가해 주세요.
-if (qs("#relayUser")) qs("#relayUser").value = sc.relayUser || "";
-if (qs("#relayPass")) qs("#relayPass").value = sc.relayPass || "";
+/
 
 qs("#saveSenderBtn")?.addEventListener("click", () => {
   const s = collectSenderForm();
