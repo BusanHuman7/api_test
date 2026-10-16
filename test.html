@@ -112,7 +112,7 @@
 <header>
   <h1>지역기반 SOHO 타겟 마케팅 및 리드 발굴 Agent</h1>
   <div class="sub">[사용법]</div>
-	<div class="sub">1. 신규 인허가 대상 조회 - 하단 [API 데이터 호출]</div>
+	<div class="sub">1. 신규 인허가 대상 조회 - 하단 [인허가 API 데이터 호출]</div>
 	<div class="sub">2. 34~37개월 이전 대상 조회 - [34~37개월 이전 데이터 추출](기준일:26.9.21)</div>
   <div class="sub" style="color:var(--warn);">※ GAS 없이 브라우저에서 공공데이터·Gemini를 직접 호출합니다. [📂 config.json 불러오기]로 로컬 키를 localStorage에 적재하세요.</div>
   <div class="sub" style="color:var(--warn);">※ 브라우저 키(config.json·localStorage)는 DevTools에 노출되므로 완전 은닉은 불가합니다. SMTP 계정·비밀번호는 릴레이 서버(.env)에만 보관하세요.</div>
@@ -208,7 +208,7 @@
       <label style="color:var(--accent); font-weight:600; margin-top:0;">⚙️ 설정 불러오기</label>
       <button class="btn btn-secondary" id="loadConfigBtn" type="button" style="padding:6px; font-size:12px;">📂 config.json 불러오기 (로컬PC)</button>
       <input type="file" id="configFileInput" accept=".json,application/json" style="display:none;" />
-      <div style="margin-top:6px;"><span class="badge" id="backendStatus">미설정</span> <span class="hint" id="configSrc">config.json 미적재</span></div>
+      <div style="margin-top:6px;"><span class="badge" id="backendStatus">미설정</span> </div>
       <div class="hint" style="margin-top:6px;">config.json은 로컬PC에만 보관하고 GitHub에는 올리지 마세요. [📂 불러오기]로 파일을 선택하면 localStorage에 저장됩니다.</div>
     </div>
 
