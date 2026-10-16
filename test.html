@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>신규 인허가 영업 자동화 – 메인(유통망 매칭 & 상권 분석)</title>
+<title>지역기반 SOHO 타겟 마케팅 및 리드 발굴 Agent</title>
 <!-- config.js(GAS 방식) 제거 → 로컬PC config.json을 버튼으로 읽어 localStorage에 저장 (test_1004) -->
 <!-- SheetJS 엑셀 파싱 라이브러리 -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -110,7 +110,7 @@
 </head>
 <body>
 <header>
-  <h1>신규 인허가 영업 자동화 & 재약정 대상 추출</h1>
+  <h1>지역기반 SOHO 타겟 마케팅 및 리드 발굴 Agent</h1>
   <div class="sub">[사용법]</div>
 	<div class="sub">1. 신규 인허가 대상 조회 - 하단 [API 데이터 호출]</div>
 	<div class="sub">2. 34~37개월 이전 대상 조회 - [34~37개월 이전 데이터 추출](기준일:26.9.21)</div>
@@ -200,7 +200,7 @@
       </div>
     </div>
 
-    <button class="btn" id="apiFetchBtn">⚡ API 데이터 호출</button>
+    <button class="btn" id="apiFetchBtn">⚡ 인허가 API 데이터 호출</button>
     <button class="btn btn-secondary" id="cancelFetchBtn" style="display:none; background:#7f1d1d;">⏹ 호출 중단</button>
     <button class="btn btn-secondary" id="resetFilterBtn">초기화</button>
 
@@ -278,7 +278,7 @@
               <tbody>
                 <tr>
                   <td colspan="8" style="text-align:center; padding:40px; color:var(--muted);">
-                    좌측 [API 데이터 호출] 또는 [34~37개월 데이터 추출] 버튼을 클릭해 주세요.
+                    좌측 [인허가 API 데이터 호출] 또는 [34~37개월 데이터 추출] 버튼을 클릭해 주세요.
                   </td>
                 </tr>
               </tbody>
