@@ -30,4 +30,8 @@
 
 11. test_1002 : excel 검색 기능 강화 / Gemini 호출 기능 추가 수정 중.... ==> 10/4 test로 이름 변경
 
-12. test_1004 : GAS 기능 제외, Key값은 localStorage에 저장,   SMTP 기능을 입혀야 되는데, 방법을....
+12. test_1004 : GAS 기능 제외, Key값은 localStorage에 저장,   SMTP 기능을 입혀야 되는데, 방법을....  ==> test.html로 이름 변경
+
+13. 10/16 test --> test_v5.html로 변경
+
+14. 
