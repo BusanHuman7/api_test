@@ -32,6 +32,6 @@
 
 12. test_1004 : GAS 기능 제외, Key값은 localStorage에 저장,   SMTP 기능을 입혀야 되는데, 방법을....  ==> test.html로 이름 변경
 
-13. 10/16 test --> test_v5.html로 변경
+13. 10/16 test(원 test_1002) --> test_v5.html로 변경
 
 14. 
