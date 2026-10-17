@@ -115,13 +115,13 @@
 	<div class="sub">1. 신규 인허가 대상 조회 - 하단 [인허가 API 데이터 호출]</div>
 	<div class="sub">2. 34~37개월 이전 대상 조회 - [34~37개월 이전 데이터 추출](기준일:26.9.21)</div>
   <div class="sub" style="color:var(--warn);">※ GAS 없이 브라우저에서 공공데이터·Gemini를 직접 호출합니다. [📂 config.json 불러오기]로 로컬 키를 localStorage에 적재하세요.</div>
-  <div class="sub" style="color:var(--warn);">※ 브라우저 키(config.json·localStorage)는 DevTools에 노출되므로 완전 은닉은 불가합니다. SMTP 계정·비밀번호는 릴레이 서버(.env)에만 보관하세요.</div>
+<!--  <div class="sub" style="color:var(--warn);">※ 브라우저 키(config.json·localStorage)는 DevTools에 노출되므로 완전 은닉은 불가합니다. SMTP 계정·비밀번호는 릴레이 서버(.env)에만 보관하세요.</div>	-->
 </header>
 
 <div class="container">
   <aside class="side">
     <div class="grp" style="background:#0d162a; padding:10px; border-radius:8px; border:1px solid var(--accent);">
-      <label style="color:var(--accent); font-weight:600; margin-top:0;">📊 엑셀 데이터 (34~37개월)</label>
+      <label style="color:var(--accent); font-weight:600; margin-top:0;">📊 인허가 데이터</label>
       <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">
         추출할 지역과 종목을 선택하면 <b>34~37개월 전</b> 데이터만 수집합니다.
       </div>
@@ -211,7 +211,7 @@
       <div style="margin-top:6px;"><span class="badge" id="backendStatus">미설정</span> </div>
       <div class="hint" style="margin-top:6px;">config.json은 로컬PC에만 보관하고 GitHub에는 올리지 마세요. [📂 불러오기]로 파일을 선택하면 localStorage에 저장됩니다.</div>
     </div>
-
+<!--
     <div class="grp" style="background:#0d162a; padding:10px; border-radius:8px; border:1px solid #8b5cf6;">
       <label style="color:#c4b5fd; font-weight:600; margin-top:0;">📧 발신 설정 (사내메일 릴레이)</label>
       <select id="senderMode" style="font-size:12px; margin-bottom:6px;">
@@ -232,6 +232,7 @@
         • 릴레이 URL·Key도 브라우저에 노출되므로, 서버에서 Key 검증 + IP 허용목록 + 역방향 프록시(사내 도메인) 권장.
       </div>
     </div>
+-->	  
   </aside>
 
   <div class="main">
