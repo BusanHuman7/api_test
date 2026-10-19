@@ -1218,7 +1218,7 @@ function applyFilters() {
   renderTable();
 }
 
-ffunction renderTable(){
+function renderTable(){
   const tb = qs("#leadTable tbody");
   tb.innerHTML = "";
   
@@ -1511,8 +1511,6 @@ qs("#toDate").addEventListener("change", applyFilters);
 qs("#apiFetchBtn").addEventListener("click", fetchPublicData);
 qs("#extractExcelBtn").addEventListener("click", loadAndExtractExcelData);
 qs("#downloadExcelBtn").addEventListener("click", downloadExcel);
-qs("#resetFilterBtn").addEventListener("click", () => {
-
 
 qs("#resetFilterBtn").addEventListener("click", () => {
   leads = [];
