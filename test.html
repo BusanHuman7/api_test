@@ -243,7 +243,8 @@
         <div style="display:flex; gap:6px;">
           <button class="btn-action" id="batchScriptBtn">🚀 전체 AI 스크립트 생성</button>
           <button class="btn-action" id="cancelBatchBtn" style="display:none; background:#7f1d1d;">⏹ 중단</button>
-          <button class="btn-action" id="openMailModalBtn" style="background:#334155; opacity:0.6; cursor:not-allowed;" disabled>📧 동별 유통망 메일 발송</button>
+		  <button class="btn-action" id="openMailModalBtn" style="background:#2563eb;">📧 동별 유통망 메일 발송</button>
+		  <!-- <button class="btn-action" id="openMailModalBtn" style="background:#334155; opacity:0.6; cursor:not-allowed;" disabled>📧 동별 유통망 메일 발송</button>	-->
           <button class="btn-excel" id="downloadExcelBtn">📥 엑셀 다운로드</button>
         </div>
       </div>
@@ -1505,22 +1506,27 @@ function renderMailPreview() {
 }
 
 qs("#openMailModalBtn").addEventListener("click", () => {
-  if (filtered.length === 0) { alert("발송할 데이터가 없습니다."); return; }
 
-  const groupedByEmail = buildGroupedLeads();
-
-  const tbody = qs("#mailSummaryBody");
-  tbody.innerHTML = "";
-  const entries = Object.entries(groupedByEmail);
-  for (const [email, items] of entries) {
-    const bad = email === "미지정" || !email.includes("@");
-    tbody.innerHTML += `<tr><td>대리점</td><td><b>${email}</b></td><td>${items.length}건</td><td>${bad ? '<span class="badge warn">제외됨</span>' : '대기'}</td></tr>`;
-  }
-  // 미리보기 (첫 번째 수신자 기준, 실제 발송 HTML과 동일)
-  renderMailPreview();
-  const mp = qs("#mailProgress"); if (mp) mp.style.display = "none";
-  mailModal.style.display = "flex";
+  alert("현재 [동별 유통망 메일 발송] 기능은 Google Appa Script 에서만 사용 가능합니다.");
+  return;
 });
+// 기능 중단
+//if (filtered.length === 0) { alert("발송할 데이터가 없습니다."); return; }
+
+//  const groupedByEmail = buildGroupedLeads();
+
+// const tbody = qs("#mailSummaryBody");
+//  tbody.innerHTML = "";
+  //const entries = Object.entries(groupedByEmail);
+  //for (const [email, items] of entries) {
+  //  const bad = email === "미지정" || !email.includes("@");
+  //  tbody.innerHTML += `<tr><td>대리점</td><td><b>${email}</b></td><td>${items.length}건</td><td>${bad ? '<span class="badge warn">제외됨</span>' : '대기'}</td></tr>`;
+  //}
+  // 미리보기 (첫 번째 수신자 기준, 실제 발송 HTML과 동일)
+  //renderMailPreview();
+  //const mp = qs("#mailProgress"); if (mp) mp.style.display = "none";
+  //mailModal.style.display = "flex";
+//});
 
 qs("#mailModalCloseBtn").addEventListener("click", () => mailModal.style.display = "none");
 qs("#cancelMailBtn").addEventListener("click", () => mailModal.style.display = "none");
