@@ -1487,6 +1487,19 @@ qs("#confirmSendMailBtn").addEventListener("click", async () => {
 });
 
 
+function buildGroupedLeads() {
+  const grouped = {};
+  filtered.forEach(item => {
+    const emails = matchBranchEmails(item.addr, item.district, item.originIndustryType);
+    const targetList = emails.length > 0 ? emails : ["미지정"];
+    targetList.forEach(email => {
+      if (!grouped[email]) grouped[email] = [];
+      grouped[email].push(item);
+    });
+  });
+  return grouped;
+}
+
 qs("#searchBox").addEventListener("input", applyFilters);
 qsa("#regionFilter input").forEach(chk => chk.addEventListener("change", applyFilters));
 qsa("#industryFilter input").forEach(chk => chk.addEventListener("change", applyFilters));
@@ -1495,48 +1508,9 @@ qs("#toDate").addEventListener("change", applyFilters);
 qs("#apiFetchBtn").addEventListener("click", fetchPublicData);
 qs("#extractExcelBtn").addEventListener("click", loadAndExtractExcelData);
 qs("#downloadExcelBtn").addEventListener("click", downloadExcel);
-// 설정 불러오기 바인딩 (config.json 파일 선택 → localStorage)
-qs("#loadConfigBtn")?.addEventListener("click", () => qs("#configFileInput")?.click());
-qs("#configFileInput")?.addEventListener("change", (e) => {
-  const f = e.target.files && e.target.files[0];
-  e.target.value = ""; // 같은 파일 재선택 가능하도록 초기화
-  if (f) loadConfigJsonFile(f);
-});
-function collectSenderForm() {
-  return {
-    mode: normalizeMode(qs("#senderMode").value),
-    fromName: qs("#senderName").value.trim(),
-    fromEmail: qs("#senderEmail").value.trim(),
-    relayUrl: qs("#relayUrl").value.trim().replace(/\/$/, ""),
-    // ID와 Password 폼 값 수집
-    relayUser: qs("#relayUser") ? qs("#relayUser").value.trim() : "",
-    relayPass: qs("#relayPass") ? qs("#relayPass").value.trim() : ""
-  };
-}
-qs("#saveSenderBtn")?.addEventListener("click", () => {
-  const s = collectSenderForm();
-  if (s.mode === "relay" && !s.relayUrl) { alert("릴레이 모드에는 릴레이 서버 URL이 필수입니다."); return; }
-  saveSenderConfig(s);
-  if (qs("#mailSendMode")) qs("#mailSendMode").value = s.mode;
-  updateMailModeUI();
-  toast("발신 설정 저장됨 (" + s.mode + ")");
-});
-qs("#testSenderBtn")?.addEventListener("click", async () => {
-  const s = collectSenderForm();
-  const to = prompt("테스트 수신 이메일을 입력해 주세요:", s.fromEmail || "");
-  if (!to) return;
-  try {
-    await sendViaRelay(to,
-      [{ name: "테스트 상호", industry: "테스트 업종", addr: "테스트 주소", telno: "010-0000-0000", permit_date: new Date().toISOString().slice(0, 10), aiScript: "" }],
-      s, "[테스트]");
-    alert("✅ 테스트 발송 성공 (via relay)");
-  } catch (e) { alert("❌ 테스트 오류: " + e.message); }
-});
-qs("#senderMode")?.addEventListener("change", (e) => { if (qs("#mailSendMode")) qs("#mailSendMode").value = e.target.value; updateMailModeUI(); });
-qs("#mailSendMode")?.addEventListener("change", (e) => { if (qs("#senderMode")) qs("#senderMode").value = e.target.value; updateMailModeUI(); });
-qs("#mailSubjectPrefix")?.addEventListener("input", () => {
-  renderMailPreview();
-});
+qs("#resetFilterBtn").addEventListener("click", () => {
+
+
 qs("#resetFilterBtn").addEventListener("click", () => {
   leads = [];
   filtered = [];
