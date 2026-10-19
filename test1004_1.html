@@ -1218,7 +1218,7 @@ function applyFilters() {
   renderTable();
 }
 
-function renderTable(){
+ffunction renderTable(){
   const tb = qs("#leadTable tbody");
   tb.innerHTML = "";
   
@@ -1231,17 +1231,20 @@ function renderTable(){
   filtered.forEach((item, idx)=>{
     const tr = document.createElement("tr");
     if(selectedId === item.id) tr.classList.add("selected");
+    
+    const safeAddr = (item.addr || '').replace(/'/g, "\\'");
+    const safeName = (item.name || '').replace(/'/g, "\\'");
 
     tr.innerHTML = `
       <td>${idx+1}</td>
-      <td><strong style="color:var(--accent); font-weight:normal;">${escHtml(item.name)}</strong></td>
-      <td>${escHtml(item.industry)}</td>
-      <td>${escHtml(item.region)}</td>
-      <td>${escHtml(item.district)}</td>
-      <td>${escHtml(item.telno)}</td>
-      <td>${escHtml(item.permit_date)}</td>
+      <td><strong style="color:var(--accent); font-weight:normal;">${item.name}</strong></td>
+      <td>${item.industry}</td>
+      <td>${item.region}</td>
+      <td>${item.district}</td>
+      <td>${item.telno}</td>
+      <td>${item.permit_date}</td>
       <td style="text-align:center;">
-        <button class="btn-map">지도</button>
+        <button onclick="event.stopPropagation(); openNaverMap('${safeAddr}', '${safeName}')" class="btn-map">지도</button>
       </td>
     `;
 
