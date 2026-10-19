@@ -1227,6 +1227,19 @@ function renderDetail(id){
   qs("#dAddr").textContent = item.addr;
   qs("#dTelno").textContent = item.telno;
   qs("#dPermit").textContent = item.permit_date;
+// 💡 [안전장치 추가] 플래그가 없어도 id가 excel_이면 무조건 TRUE 표시
+  const renewalEl = qs("#dIsRenewal");
+  if (renewalEl) {
+    const isTarget = item.isRenewalTarget || (item.id && String(item.id).indexOf("excel_") === 0);
+    if (isTarget) {
+      renewalEl.textContent = "TRUE (3년차 재계약 대상)";
+      renewalEl.style.color = "#34d399"; // 초록색
+    } else {
+      renewalEl.textContent = "FALSE (신규 대상)";
+      renewalEl.style.color = "#fbbf24"; // 주황색
+    }
+  }
+	
   qs("#dScript").textContent = item.aiScript || "버튼을 눌러 영업 스크립트 또는 상권 분석 결과를 확인하세요.";
 }
 
