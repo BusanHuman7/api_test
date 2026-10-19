@@ -1231,20 +1231,17 @@ function renderTable(){
   filtered.forEach((item, idx)=>{
     const tr = document.createElement("tr");
     if(selectedId === item.id) tr.classList.add("selected");
-    
-    const safeAddr = (item.addr || '').replace(/'/g, "\\'");
-    const safeName = (item.name || '').replace(/'/g, "\\'");
 
     tr.innerHTML = `
       <td>${idx+1}</td>
-      <td><strong style="color:var(--accent); font-weight:normal;">${item.name}</strong></td>
-      <td>${item.industry}</td>
-      <td>${item.region}</td>
-      <td>${item.district}</td>
-      <td>${item.telno}</td>
-      <td>${item.permit_date}</td>
+      <td><strong style="color:var(--accent); font-weight:normal;">${escHtml(item.name)}</strong></td>
+      <td>${escHtml(item.industry)}</td>
+      <td>${escHtml(item.region)}</td>
+      <td>${escHtml(item.district)}</td>
+      <td>${escHtml(item.telno)}</td>
+      <td>${escHtml(item.permit_date)}</td>
       <td style="text-align:center;">
-        <button onclick="event.stopPropagation(); openNaverMap('${safeAddr}', '${safeName}')" class="btn-map">지도</button>
+        <button class="btn-map">지도</button>
       </td>
     `;
 
@@ -1434,62 +1431,6 @@ function downloadExcel() {
 
 const mailModal = qs("#mailModal");
 
-qs("#openMailModalBtn").addEventListener("click", () => {
-  if (filtered.length === 0) { alert("발송할 데이터가 없습니다."); return; }
-
-  const groupedByEmail = {};
-  filtered.forEach(item => {
-    const emails = matchBranchEmails(item.addr, item.district, item.originIndustryType);
-    const targetList = emails.length > 0 ? emails : ["미지정"];
-    
-    targetList.forEach(email => {
-      if (!groupedByEmail[email]) groupedByEmail[email] = [];
-      groupedByEmail[email].push(item);
-    });
-  });
-
-  const tbody = qs("#mailSummaryBody");
-  tbody.innerHTML = "";
-  for (const [email, items] of Object.entries(groupedByEmail)) {
-    tbody.innerHTML += `<tr><td>대리점</td><td><b>${email}</b></td><td>${items.length}건</td><td>대기</td></tr>`;
-  }
-  mailModal.style.display = "flex";
-});
-
-qs("#mailModalCloseBtn").addEventListener("click", () => mailModal.style.display = "none");
-qs("#cancelMailBtn").addEventListener("click", () => mailModal.style.display = "none");
-
-qs("#confirmSendMailBtn").addEventListener("click", async () => {
-  qs("#confirmSendMailBtn").innerHTML = `<span class="spinner"></span> 메일 발송 중...`;
-  qs("#confirmSendMailBtn").disabled = true;
-
-  try {
-    const groupedLeads = {};
-    filtered.forEach(item => {
-      const emails = matchBranchEmails(item.addr, item.district, item.originIndustryType);
-      const targetList = emails.length > 0 ? emails : ["미지정"];
-      targetList.forEach(email => {
-        if (!groupedLeads[email]) groupedLeads[email] = [];
-        groupedLeads[email].push(item);
-      });
-    });
-
-    const res = await callGasBackend("sendMail", { groupedLeads: groupedLeads });
-    if (res.status === "success") {
-      alert(`🚀 총 ${res.sentCount}개 담당 대리점으로 이메일 발송이 완료 되었습니다!`);
-      mailModal.style.display = "none";
-    } else {
-      alert("❌ 발송 실패: " + res.message);
-    }
-  } catch (err) {
-    alert("❌ 이메일 전송 오류: " + err.message);
-  } finally {
-    qs("#confirmSendMailBtn").innerHTML = `🚀 이메일 일괄 발송 시작`;
-    qs("#confirmSendMailBtn").disabled = false;
-  }
-});
-
-
 function buildGroupedLeads() {
   const grouped = {};
   filtered.forEach(item => {
@@ -1503,6 +1444,162 @@ function buildGroupedLeads() {
   return grouped;
 }
 
+function buildMailBody(items, maxItems = 3) {
+  let body = "안녕하세요, 담당 유통망 담당자님.\n\n신규 인허가 영업 리드 목록을 전달드립니다.\n\n";
+  items.slice(0, maxItems).forEach((item, idx) => {
+    body += `[${idx + 1}] 상호명 : ${item.name}\n- 업종: ${item.industry}\n- 주소: ${item.addr}\n- 전화번호: ${item.telno}\n- 인허가일: ${item.permit_date}\n----------------------------------------\n`;
+  });
+  if (items.length > maxItems) body += `\n... 외 ${items.length - maxItems}건 (전체 목록은 첨부/본문 전체 발송 참조)\n`;
+  return body;
+}
+
+function escHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// 메일 표 형태 HTML 본문 (릴레이 서버가 html 필드로 발송, text는 폴백용)
+function buildMailHtml(items) {
+  const cell = "border:1px solid #cbd5e1; padding:6px 8px; font-size:13px; color:#1e293b;";
+  const head = "border:1px solid #cbd5e1; padding:6px 8px; font-size:13px; background:#1e3a8a; color:#ffffff;";
+  const rows = items.map((item, idx) => {
+    let r = "<tr>"
+      + `<td style="${cell}; text-align:center;">${idx + 1}</td>`
+      + `<td style="${cell}"><b>${escHtml(item.name)}</b></td>`
+      + `<td style="${cell}">${escHtml(item.industry)}</td>`
+      + `<td style="${cell}">${escHtml(item.addr)}</td>`
+      + `<td style="${cell}; white-space:nowrap;">${escHtml(item.telno)}</td>`
+      + `<td style="${cell}; white-space:nowrap;">${escHtml(item.permit_date)}</td>`
+      + "</tr>";
+    if (item.aiScript) {
+      r += `<tr><td colspan="6" style="${cell} background:#f1f5f9;"><b>AI 영업 스크립트</b><br/>${escHtml(item.aiScript).replace(/\n/g, "<br/>")}</td></tr>`;
+    }
+    return r;
+  }).join("");
+  return `<div style="font-family:Arial,sans-serif; font-size:14px; color:#1e293b;">`
+    + `<p>안녕하세요, 담당 유통망 담당자님.<br/>신규 인허가 영업 리드 목록을 전달드립니다. (총 ${items.length}건)</p>`
+    + `<table style="border-collapse:collapse; width:100%;">`
+    + `<tr><th style="${head}">번호</th><th style="${head}">상호</th><th style="${head}">업종</th>`
+    + `<th style="${head}">주소</th><th style="${head}">전화번호</th><th style="${head}">인허가일</th></tr>`
+    + rows + "</table></div>";
+}
+
+// 미리보기 렌더 (실제 발송 HTML과 동일 내용)
+function renderMailPreview() {
+  const box = qs("#mailPreview");
+  const entries = Object.entries(buildGroupedLeads()).filter(([e]) => e !== "미지정" && e.includes("@"));
+  const first = entries[0];
+  if (!first) { box.textContent = "유효한 수신자가 없습니다. 유통망 매핑을 확인해 주세요."; return; }
+  const subj = qs("#mailSubjectPrefix").value + " (" + first[1].length + "건)";
+  box.innerHTML = `<div style="margin-bottom:8px; font-size:12px;">To: <b>${escHtml(first[0])}</b><br/>Subject: <b>${escHtml(subj)}</b></div>`
+    + buildMailHtml(first[1]);
+}
+
+qs("#openMailModalBtn").addEventListener("click", () => {
+  if (filtered.length === 0) { alert("발송할 데이터가 없습니다."); return; }
+
+  const groupedByEmail = buildGroupedLeads();
+
+  const tbody = qs("#mailSummaryBody");
+  tbody.innerHTML = "";
+  const entries = Object.entries(groupedByEmail);
+  for (const [email, items] of entries) {
+    const bad = email === "미지정" || !email.includes("@");
+    tbody.innerHTML += `<tr><td>대리점</td><td><b>${email}</b></td><td>${items.length}건</td><td>${bad ? '<span class="badge warn">제외됨</span>' : '대기'}</td></tr>`;
+  }
+  // 미리보기 (첫 번째 수신자 기준, 실제 발송 HTML과 동일)
+  renderMailPreview();
+  const mp = qs("#mailProgress"); if (mp) mp.style.display = "none";
+  mailModal.style.display = "flex";
+});
+
+qs("#mailModalCloseBtn").addEventListener("click", () => mailModal.style.display = "none");
+qs("#cancelMailBtn").addEventListener("click", () => mailModal.style.display = "none");
+
+qs("#confirmSendMailBtn").addEventListener("click", async () => {
+  const btn = qs("#confirmSendMailBtn");
+  btn.innerHTML = `<span class="spinner"></span> 메일 발송 중...`;
+  btn.disabled = true;
+  const mp = qs("#mailProgress"), mpBar = qs("#mailProgressBar"), mpTx = qs("#mailProgressText");
+  if (mp) mp.style.display = "block";
+
+  try {
+    const groupedLeads = buildGroupedLeads();
+    const sender = getSenderConfig();
+    // 모달 내 선택값을 우선 적용
+    sender.mode = normalizeMode(qs("#mailSendMode") ? qs("#mailSendMode").value : sender.mode);
+    const subjectPrefix = qs("#mailSubjectPrefix") ? qs("#mailSubjectPrefix").value.trim() : "[신규 인허가 영업 자동화] 담당 지역 영업 리드 안내";
+
+    const validEntries = Object.entries(groupedLeads).filter(([e]) => e !== "미지정" && e.includes("@"));
+    if (validEntries.length === 0) { alert("유효한 수신자가 없습니다."); return; }
+    if (!confirm(`${validEntries.length}개 수신처, 총 ${filtered.length}건 데이터를 릴레이 방식으로 발송할까요?`)) return;
+
+    if (!sender.relayUrl) {
+      alert("릴레이 모드에는 릴레이 서버 URL이 필요합니다. 좌측 [발신 설정]을 저장해 주세요.");
+      return;
+    }
+    if (!sender.fromEmail) {
+      if (!confirm("From 이메일이 비어 있습니다. 릴레이 서버 기본값으로 발송할까요?")) return;
+    }
+
+    if (mpTx) mpTx.textContent = "릴레이 서버로 발송 요청 중…";
+    let sent = 0; const failed = [];
+    for (let i = 0; i < validEntries.length; i++) {
+      const [email, items] = validEntries[i];
+      if (mpBar) mpBar.style.width = Math.round(20 + (i / validEntries.length) * 75) + "%";
+      if (mpTx) mpTx.textContent = `발송 중… (${i + 1}/${validEntries.length}) ${email}`;
+      try {
+        await sendViaRelay(email, items, sender, subjectPrefix);
+        sent++;
+      } catch (e) {
+        console.warn("발송 실패", email, e);
+        failed.push(email + " (" + e.message + ")");
+      }
+      await sleep(400);
+    }
+
+    if (mpBar) mpBar.style.width = "100%";
+    if (failed.length === 0) {
+      alert(`🚀 총 ${sent}개 담당 대리점으로 이메일 발송 완료! (방식: relay)`);
+      mailModal.style.display = "none";
+    } else {
+      alert(`⚠️ 성공 ${sent}건 / 실패 ${failed.length}건\n실패 목록: ` + failed.slice(0, 5).join(", "));
+    }
+  } catch (err) {
+    alert("❌ 이메일 전송 오류: " + err.message);
+  } finally {
+    btn.innerHTML = `🚀 이메일 일괄 발송 시작`;
+    btn.disabled = false;
+  }
+});
+
+// 릴레이 서버 직접 POST (GAS 중계 없이 브라우저 → 릴레이)
+async function sendViaRelay(toEmail, items, sender, subjectPrefix) {
+  const payload = {
+    to: toEmail,
+    from: sender.fromEmail || "",
+    fromName: sender.fromName || "",
+    subject: subjectPrefix + " (" + items.length + "건)",
+    body: buildMailBody(items, items.length),
+    html: buildMailHtml(items),
+    key: sender.relayKey || ""
+  };
+  let res;
+  try {
+    res = await fetchWithTimeout(sender.relayUrl, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }, 60000);
+  } catch (e) {
+    throw new Error("릴레이 접속 실패(방화벽·CORS 확인): " + e.message);
+  }
+  if (res.status === 401) throw new Error("릴레이 키 불일치(401)");
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error("릴레이 오류(" + res.status + "): " + t.slice(0, 120));
+  }
+  return true;
+}
+
 qs("#searchBox").addEventListener("input", applyFilters);
 qsa("#regionFilter input").forEach(chk => chk.addEventListener("change", applyFilters));
 qsa("#industryFilter input").forEach(chk => chk.addEventListener("change", applyFilters));
@@ -1511,7 +1608,48 @@ qs("#toDate").addEventListener("change", applyFilters);
 qs("#apiFetchBtn").addEventListener("click", fetchPublicData);
 qs("#extractExcelBtn").addEventListener("click", loadAndExtractExcelData);
 qs("#downloadExcelBtn").addEventListener("click", downloadExcel);
-
+// 설정 불러오기 바인딩 (config.json 파일 선택 → localStorage)
+qs("#loadConfigBtn")?.addEventListener("click", () => qs("#configFileInput")?.click());
+qs("#configFileInput")?.addEventListener("change", (e) => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = ""; // 같은 파일 재선택 가능하도록 초기화
+  if (f) loadConfigJsonFile(f);
+});
+function collectSenderForm() {
+  return {
+    mode: normalizeMode(qs("#senderMode").value),
+    fromName: qs("#senderName").value.trim(),
+    fromEmail: qs("#senderEmail").value.trim(),
+    relayUrl: qs("#relayUrl").value.trim().replace(/\/$/, ""),
+    // ID와 Password 폼 값 수집
+    relayUser: qs("#relayUser") ? qs("#relayUser").value.trim() : "",
+    relayPass: qs("#relayPass") ? qs("#relayPass").value.trim() : ""
+  };
+}
+qs("#saveSenderBtn")?.addEventListener("click", () => {
+  const s = collectSenderForm();
+  if (s.mode === "relay" && !s.relayUrl) { alert("릴레이 모드에는 릴레이 서버 URL이 필수입니다."); return; }
+  saveSenderConfig(s);
+  if (qs("#mailSendMode")) qs("#mailSendMode").value = s.mode;
+  updateMailModeUI();
+  toast("발신 설정 저장됨 (" + s.mode + ")");
+});
+qs("#testSenderBtn")?.addEventListener("click", async () => {
+  const s = collectSenderForm();
+  const to = prompt("테스트 수신 이메일을 입력해 주세요:", s.fromEmail || "");
+  if (!to) return;
+  try {
+    await sendViaRelay(to,
+      [{ name: "테스트 상호", industry: "테스트 업종", addr: "테스트 주소", telno: "010-0000-0000", permit_date: new Date().toISOString().slice(0, 10), aiScript: "" }],
+      s, "[테스트]");
+    alert("✅ 테스트 발송 성공 (via relay)");
+  } catch (e) { alert("❌ 테스트 오류: " + e.message); }
+});
+qs("#senderMode")?.addEventListener("change", (e) => { if (qs("#mailSendMode")) qs("#mailSendMode").value = e.target.value; updateMailModeUI(); });
+qs("#mailSendMode")?.addEventListener("change", (e) => { if (qs("#senderMode")) qs("#senderMode").value = e.target.value; updateMailModeUI(); });
+qs("#mailSubjectPrefix")?.addEventListener("input", () => {
+  renderMailPreview();
+});
 qs("#resetFilterBtn").addEventListener("click", () => {
   leads = [];
   filtered = [];
