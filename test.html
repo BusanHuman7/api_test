@@ -1245,7 +1245,13 @@ function renderDetail(id){
 
 qs("#aiGenerateBtn").addEventListener("click", async () => {
   if (!currentSelectedItem) { alert("대상을 선택해 주세요."); return; }
-  const scriptBox = qs("#dScript");
+
+	// 🔍 [디버깅용] 현재 백엔드로 보내는 데이터 객체를 콘솔에 출력해서 확인
+  console.log("🚀 백엔드로 전송하는 item 객체:", currentSelectedItem);
+  console.log("🔍 isRenewalTarget 값:", currentSelectedItem.isRenewalTarget);
+  console.log("🔍 id 값:", currentSelectedItem.id);
+	
+	const scriptBox = qs("#dScript");
   scriptBox.innerHTML = `<span class="spinner"></span> Gemini 직접 호출로 스크립트 생성 중...`;
 
   try {
