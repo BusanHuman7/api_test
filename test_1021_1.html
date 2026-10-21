@@ -1352,6 +1352,7 @@ qs("#mailModalCloseBtn").addEventListener("click", () => mailModal.style.display
 qs("#cancelMailBtn").addEventListener("click", () => mailModal.style.display = "none");
 
 // 🚀 GAS 백엔드를 통한 메일 일괄 발송 처리
+//      headers: { "Content-Type": "text/plain;charset=utf-8" },
 qs("#confirmSendMailBtn").addEventListener("click", async () => {
   const btn = qs("#confirmSendMailBtn");
   btn.innerHTML = `<span class="spinner"></span> GAS 메일 발송 중...`;
@@ -1389,11 +1390,10 @@ qs("#confirmSendMailBtn").addEventListener("click", async () => {
 
     const res = await fetchWithTimeout(gasUrl, {
       method: "POST",
-//      headers: { "Content-Type": "text/plain;charset=utf-8" },
-		headers: {
+	  headers: {
     		"Content-Type": "application/json"
-		  },
-  	 body: JSON.stringify({
+	  },
+      body: JSON.stringify({
         action: "sendMail",
         params: { groupedLeads: payloadGrouped }
       })
