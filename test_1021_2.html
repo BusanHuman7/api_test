@@ -1351,8 +1351,8 @@ qs("#openMailModalBtn").addEventListener("click", () => {
 qs("#mailModalCloseBtn").addEventListener("click", () => mailModal.style.display = "none");
 qs("#cancelMailBtn").addEventListener("click", () => mailModal.style.display = "none");
 
-// 🚀 GAS 백엔드를 통한 메일 일괄 발송 처리
-// 🚀 GAS 백엔드를 통한 메일 일괄 발송 처리 (CORS 우회 적용)
+
+// 🚀 GAS 백엔드를 통한 메일 일괄 발송 처리 (수정 버전)
 qs("#confirmSendMailBtn").addEventListener("click", async () => {
   const gasUrl = getGasUrl();
   if (!gasUrl) {
@@ -1383,28 +1383,22 @@ qs("#confirmSendMailBtn").addEventListener("click", async () => {
 
     if (!confirm(`총 ${validCount}건 데이터를 GAS 백엔드를 통해 담당 대리점으로 전송할까요?`)) return;
 
-    // 폼 데이터 포맷 변환 (test_v2 방식)
-    const formData = new URLSearchParams();
-    formData.append("data", JSON.stringify({ 
-      leads: filtered,
-      groupedLeads: payloadGrouped 
-    }));
-
-    // 🚀 fetch 전송 (mode: 'no-cors' 적용)
+    // 🚀 fetch 전송 (mode: 'no-cors' 유지 + GAS가 파싱할 수 있는 JSON 본문 형식으로 복원)
     await fetch(gasUrl, {
       method: "POST",
       mode: "no-cors",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: formData
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "sendMail",
+        params: { groupedLeads: payloadGrouped }
+      })
     });
 
-    alert(`🚀 총 ${Object.keys(payloadGrouped).length}개의 수신처로 메일 발송 요청을 완료했습니다!`);
+    alert(`🚀 총 ${Object.keys(payloadGrouped).length}개의 수신처로 메일 발송 요청을 전송했습니다!\n(※ no-cors 특성상 발송 완료 여부는 담당 대리점 메일함에서 직접 확인해 주세요.)`);
     mailModal.style.display = "none";
   } catch (err) {
     console.error(err);
-    alert("❌ 메일 발송 오류: " + err.message);
+    alert("❌ 메일 전송 오류: " + err.message);
   } finally {
     btn.innerHTML = `🚀 GAS 이메일 일괄 발송 시작`;
     btn.disabled = false;
