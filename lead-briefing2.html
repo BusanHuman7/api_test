@@ -330,18 +330,18 @@ function loadPreset(key) {
 
     // --- config.json 파일 로드 및 API 키 상태 관리 ---
     function updateApiKeyStatus() {
-      const key = localStorage.getItem('GEMINI_API_KEY') || localStorage.getItem('gemini_api_key') || '';
-      const statusEl = document.getElementById('backendStatus');
-      if (statusEl) {
-        if (key) {
-          statusEl.textContent = 'API 키 설정됨';
-          statusEl.className = 'text-[11px] bg-emerald-900/50 text-emerald-300 px-2.5 py-1 rounded border border-emerald-700/50';
-        } else {
-          statusEl.textContent = '미설정';
-          statusEl.className = 'text-[11px] bg-amber-900/50 text-amber-300 px-2.5 py-1 rounded border border-amber-700/50';
-        }
-      }
-    }
+  const key = (localStorage.getItem('GEMINI_API_KEY') || localStorage.getItem('gemini_api_key') || '').trim();
+  const statusEl = document.getElementById('backendStatus');
+  if (!statusEl) return;
+
+  if (key !== '') {
+    statusEl.textContent = 'API 키 설정됨';
+    statusEl.className = 'text-[11px] bg-emerald-900/50 text-emerald-300 px-2.5 py-1 rounded border border-emerald-700/50';
+  } else {
+    statusEl.textContent = '미설정';
+    statusEl.className = 'text-[11px] bg-amber-900/50 text-amber-300 px-2.5 py-1 rounded border border-amber-700/50';
+  }
+}
 
     document.getElementById('loadConfigBtn')?.addEventListener('click', () => {
       document.getElementById('configFileInput')?.click();
