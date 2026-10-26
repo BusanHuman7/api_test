@@ -598,16 +598,18 @@ for (const model of GEMINI_MODELS) {
 
         showToast('1-Paper 브리핑지가 성공적으로 생성되었습니다!');
 
-      } catch (err) {
+	} catch (err) {
         clearInterval(stepInterval);
         console.error(err);
-        showToast('생성 실패: API Key를 확인하시거나 다시 시도해 주세요.');
+        showToast('생성 실패: ' + err.message);
         statusBadge.innerText = '오류 발생';
         statusBadge.className = 'text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded border border-red-200 font-bold';
       } finally {
+        clearInterval(stepInterval);
         loadingOverlay.classList.add('hidden');
       }
     }
+
   </script>
 </body>
 </html>
