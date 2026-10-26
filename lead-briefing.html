@@ -521,70 +521,68 @@ let lastMsg = "알 수 없는 오류";
       let generatedText = "";
 
   for (const model of GEMINI_MODELS) {
-// ✅ apiUrl 선언
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=` + encodeURIComponent(apiKey);
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=` + encodeURIComponent(apiKey);
 
-        for (let a = 0; a < 3; a++) {
-          try {
-            // ✅ 표준 fetch 및 타임아웃/재시도 로직 적용
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 20000);
-
-            const res = await fetch(apiUrl, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }),
-              signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            if (res.status === 503 || res.status === 429) {
-              lastMsg = `Gemini 과부하(${res.status})`;
-              await new Promise(r => setTimeout(r, 1500 * Math.pow(2, a)));
-              continue;
-            }
-
-            const text = await res.text();
-            let json = null;
+          for (let a = 0; a < 3; a++) {
             try {
-              json = JSON.parse(text);
-            } catch (e) {
-              lastMsg = "Gemini 응답 파싱 실패";
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+              const res = await fetch(apiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }),
+                signal: controller.signal
+              });
+              clearTimeout(timeoutId);
+
+              if (res.status === 503 || res.status === 429) {
+                lastMsg = `Gemini 과부하(${res.status})`;
+                await new Promise(r => setTimeout(r, 1500 * Math.pow(2, a)));
+                continue;
+              }
+
+              const text = await res.text();
+              let json = null;
+              try {
+                json = JSON.parse(text);
+              } catch (e) {
+                lastMsg = "Gemini 응답 파싱 실패";
+                break;
+              }
+
+              if (!res.ok) {
+                lastMsg = `Gemini API 오류(${res.status}): ` + ((json && json.error && json.error.message) || text.slice(0, 120));
+                break;
+              }
+
+              const out = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+              const trimmed = (out || "").trim();
+
+              if (!trimmed) {
+                lastMsg = "Gemini 빈 응답";
+                await new Promise(r => setTimeout(r, 1500));
+                continue;
+              }
+
+              generatedText = trimmed;
               break;
+
+            } catch (e) {
+              lastMsg = e.message;
+              await new Promise(r => setTimeout(r, 1500 * (a + 1)));
             }
-
-            if (!res.ok) {
-              lastMsg = `Gemini API 오류(${res.status}): ` + ((json && json.error && json.error.message) || text.slice(0, 120));
-              break; // 다음 모델로 시도
-            }
-
-            const out = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-            const trimmed = (out || "").trim();
-
-            if (!trimmed) {
-              lastMsg = "Gemini 빈 응답";
-              await new Promise(r => setTimeout(r, 1500));
-              continue;
-            }
-
-            generatedText = trimmed;
-            break;
-
-          } catch (e) {
-            lastMsg = e.message;
-            await new Promise(r => setTimeout(r, 1500 * (a + 1)));
           }
+          if (generatedText) break;
         }
-        if (generatedText) break; // 성공 시 모델 루프 탈출
-      }
 
-      if (!generatedText) {
-        throw new Error(`모든 Gemini 모델 호출 실패: ${lastMsg}`);
-      }
+        if (!generatedText) {
+          throw new Error(`모든 Gemini 모델 호출 실패: ${lastMsg}`);
+        }
 
         currentMarkdown = generatedText;
         
-        // Render Markdown
+        // Render Markdown to UI
         document.getElementById('reportContent').innerHTML = marked.parse(currentMarkdown);
 
         emptyState.classList.add('hidden');
@@ -595,7 +593,7 @@ let lastMsg = "알 수 없는 오류";
 
         showToast('1-Paper 브리핑지가 성공적으로 생성되었습니다!');
 
-	} catch (err) {
+      } catch (err) {
         clearInterval(stepInterval);
         console.error(err);
         showToast('생성 실패: ' + err.message);
@@ -606,7 +604,6 @@ let lastMsg = "알 수 없는 오류";
         loadingOverlay.classList.add('hidden');
       }
     }
-
   </script>
 </body>
 </html>
