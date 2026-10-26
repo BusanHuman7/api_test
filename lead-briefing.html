@@ -232,11 +232,8 @@
           </div>
           <h3 class="text-sm font-bold text-slate-600 mb-1">작성된 브리핑지 없음</h3>
           <p class="text-xs text-slate-400 max-w-xs mb-4">
-            좌측 양식에 상호명과 주소를 입력하거나 빠른 샘플을 클릭하여 1-Paper 브리핑지를 생성해보세요.
+            좌측 양식에 상호명과 주소를 입력하여 1-Paper 브리핑지를 생성해보세요.
           </p>
-          <button onclick="loadPreset('yangsando')" class="text-xs text-brand-600 hover:text-brand-700 font-bold underline">
-            양산도집 샘플 불러오기
-          </button>
         </div>
 
         <!-- Rendered Report Document Container (Print Target) -->
@@ -512,23 +509,41 @@ const GEMINI_MODELS = [
     "gemini-3.8-flash",
     "gemini-flash-lite"
 ];
-	for (const model of GEMINI_MODELS) {  
-      const apiKey = localStorage.getItem('gemini_api_key') || "";
+
+	  const apiKey = localStorage.getItem('gemini_api_key') || "";
+         
+	  for (const model of GEMINI_MODELS) {  
 	  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(apiKey);
 	  for (let a = 0; a < 3; a++) {
-		try {
-			const response = await fetch(apiUrl, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				contents: [{ parts: [{ text: userPrompt }] }],
-				systemInstruction: { parts: [{ text: systemInstruction }] }
-			})
-			});
+      try {
+        const res = await fetchWithTimeout(url, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        }, timeoutMs);
+        if (res.status === 503 || res.status === 429) {
+          lastMsg = "Gemini 과부하(" + res.status + ")"; lastRetryable = true;
+          await sleep(1500 * Math.pow(2, a) + 300);
+          continue;
+        }
+        const text = await res.text();
+        let json = null;
+        try { json = JSON.parse(text); } catch (e) { lastMsg = "Gemini 응답 파싱 실패"; lastRetryable = false; break; }
+        if (!res.ok) {
+          lastMsg = "Gemini API 오류(" + res.status + "): " + ((json && json.error && json.error.message) || text.slice(0, 120));
+          lastRetryable = false;
+          break;
+        }
+        const out = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const trimmed = (out || "").trim();
+        if (!trimmed) { lastMsg = "Gemini 빈 응답"; lastRetryable = true; await sleep(1500); continue; }
+        return { status: "success", script: trimmed, report: trimmed, model: model };
+      } catch (e) {
+        lastMsg = e.message; lastRetryable = /503|429|overloaded|timeout|abort|network|fetch/i.test(lastMsg);
+        if (!lastRetryable) break;
+        await sleep(1500 * (a + 1));
+      }
+    }
 
-			clearInterval(stepInterval);
-		}
-	}
         if (!response.ok) {
           throw new Error(`API 호출 실패: status ${response.status}`);
         }
