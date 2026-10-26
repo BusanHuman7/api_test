@@ -120,7 +120,7 @@
             <label for="businessName" class="block text-xs font-semibold text-slate-700 mb-1">
               상호명 <span class="text-red-500">*</span>
             </label>
-            <input type="text" id="businessName" required placeholder="예: 양산도집, 성심당, 스타벅스 강남점" 
+            <input type="text" id="businessName" required placeholder="예: 성심당, 스타벅스 강남점" 
               class="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
           </div>
 
@@ -129,7 +129,7 @@
             <label for="businessAddress" class="block text-xs font-semibold text-slate-700 mb-1">
               주소 또는 지역 <span class="text-red-500">*</span>
             </label>
-            <input type="text" id="businessAddress" required placeholder="예: 부산 사상구 낙동대로 799-34 또는 서울 마포구 연남동" 
+            <input type="text" id="businessAddress" required placeholder="예: 대전 중구 대종로480번길 15 또는 서울 마포구 연남동" 
               class="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
           </div>
 
@@ -141,7 +141,6 @@
             <select id="sellingItem" class="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white">
               <option value="테이블오더 및 선결제 포스 솔루션">테이블오더 / 스마트 포스 솔루션</option>
               <option value="모바일 예약 및 웨이팅 솔루션">모바일 예약 / 웨이팅 솔루션</option>
-              <option value="고객 적립 및 재방문 CRM 마케팅">고객 적립 및 재방문 CRM</option>
               <option value="네이버 스마트플레이스 & 바이럴 마케팅">네이버 플레이스 & 바이럴 마케팅</option>
               <option value="서빙 로봇 / 매장 자동화 기기">서빙 로봇 / 매장 자동화 기기</option>
               <option value="종합 B2B 솔루션 (맞춤 제안)">종합 B2B 솔루션 (맞춤 제안)</option>
@@ -488,7 +487,9 @@ Include: 매장 규모, 주 고객층, 디지털 활용도, 주요 상품/메뉴
 - [YYYY-MM-DD]: 방문 가이드 및 추천 방문 시간대
 `;
 
-      const userPrompt = `
+      const promptText = `
+[역할]
+너는 B2B 소상공인 영업 타겟 분석가야.
 영업 타겟 대상 정보:
 - 상호명: ${name}
 - 주소/지역: ${address}
@@ -510,84 +511,79 @@ const GEMINI_MODELS = [
     "gemini-flash-lite"
 ];
 
-	  const apiKey = localStorage.getItem('gemini_api_key') || "";
-         
-	  if (!apiKey) {
-  throw new Error("API 키가 설정되지 않았습니다. API 키를 입력해 주세요.");
-}
+          const apiKey = localStorage.getItem('gemini_api_key'] || document.getElementById('apiKey').value.trim();
 
-let lastMsg = "";
-let lastRetryable = false;
+	  if (!apiKey) {
+	  	throw new Error("API 키가 설정되지 않았습니다. API 키를 입력해 주세요.");
+	  }
+
+let lastMsg = "알 수 없는 오류";
+      let generatedText = "";
 
 for (const model of GEMINI_MODELS) {
   // ✅ apiUrl 선언
   const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(apiKey);
 
-  for (let a = 0; a < 3; a++) {
-    try {
-      // ✅ apiUrl 변수명 일치 적용
-      const res = await fetchWithTimeout(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      }, timeoutMs);
+  for (const model of GEMINI_MODELS) {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=` + encodeURIComponent(apiKey);
 
-      // 과부하 또는 Rate Limit 시 재시도
-      if (res.status === 503 || res.status === 429) {
-        lastMsg = `Gemini 과부하(${res.status})`;
-        lastRetryable = true;
-        await sleep(1500 * Math.pow(2, a) + 300);
-        continue;
-      }
+        for (let a = 0; a < 3; a++) {
+          try {
+            // ✅ 표준 fetch 및 타임아웃/재시도 로직 적용
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-      const text = await res.text();
-      let json = null;
-      try {
-        json = JSON.parse(text);
-      } catch (e) {
-        lastMsg = "Gemini 응답 파싱 실패";
-        lastRetryable = false;
-        break;
-      }
+            const res = await fetch(apiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }),
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
 
-      // 404 등 기타 오류 발생 시 다음 모델로 넘어가도록 처리
-      if (!res.ok) {
-        lastMsg = `Gemini API 오류(${res.status}): ` + ((json && json.error && json.error.message) || text.slice(0, 120));
-        lastRetryable = false;
-        break; // 현재 모델 실패 후 다음 GEMINI_MODELS로 이동
-      }
+            if (res.status === 503 || res.status === 429) {
+              lastMsg = `Gemini 과부하(${res.status})`;
+              await new Promise(r => setTimeout(r, 1500 * Math.pow(2, a)));
+              continue;
+            }
 
-      const out = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-      const trimmed = (out || "").trim();
+            const text = await res.text();
+            let json = null;
+            try {
+              json = JSON.parse(text);
+            } catch (e) {
+              lastMsg = "Gemini 응답 파싱 실패";
+              break;
+            }
 
-      if (!trimmed) {
-        lastMsg = "Gemini 빈 응답";
-        lastRetryable = true;
-        await sleep(1500);
-        continue;
-      }
+            if (!res.ok) {
+              lastMsg = `Gemini API 오류(${res.status}): ` + ((json && json.error && json.error.message) || text.slice(0, 120));
+              break; // 다음 모델로 시도
+            }
 
-      // 성공 시 결과 반환
-      return { status: "success", script: trimmed, report: trimmed, model: model };
+            const out = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+            const trimmed = (out || "").trim();
 
-    } catch (e) {
-      lastMsg = e.message;
-      lastRetryable = /503|429|overloaded|timeout|abort|network|fetch/i.test(lastMsg);
-      if (!lastRetryable) break;
-      await sleep(1500 * (a + 1));
-    }
-  }
-}
+            if (!trimmed) {
+              lastMsg = "Gemini 빈 응답";
+              await new Promise(r => setTimeout(r, 1500));
+              continue;
+            }
 
-// 모든 모델 호출 실패 시 예외 던지기
-throw new Error(`모든 Gemini 모델 호출 실패: ${lastMsg}`);
+            generatedText = trimmed;
+            break;
 
-        const data = await response.json();
-        const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!generatedText) {
-          throw new Error('응답 데이터를 읽을 수 없습니다.');
+          } catch (e) {
+            lastMsg = e.message;
+            await new Promise(r => setTimeout(r, 1500 * (a + 1)));
+          }
         }
+        if (generatedText) break; // 성공 시 모델 루프 탈출
+      }
+
+      if (!generatedText) {
+        throw new Error(`모든 Gemini 모델 호출 실패: ${lastMsg}`);
+      }
 
         currentMarkdown = generatedText;
         
