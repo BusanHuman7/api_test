@@ -65,17 +65,17 @@
       }
     }
 
-    /* Markdown Styling inside preview */
-    .prose-custom h1 { font-size: 1.4rem; font-weight: 800; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 0.4rem; margin-top: 0.5rem; margin-bottom: 0.8rem; }
-    .prose-custom h2 { font-size: 1.1rem; font-weight: 700; color: #1e293b; border-left: 4px solid #2563eb; padding-left: 0.5rem; margin-top: 1rem; margin-bottom: 0.5rem; }
-    .prose-custom h3 { font-size: 0.98rem; font-weight: 700; color: #334155; margin-top: 0.9rem; margin-bottom: 0.4rem; }
-    .prose-custom ul { list-style-type: none; padding-left: 0; margin-top: 0.4rem; margin-bottom: 0.4rem; }
-    .prose-custom li { position: relative; padding-left: 1.1rem; margin-bottom: 0.3rem; line-height: 1.45; font-size: 0.88rem; }
-    .prose-custom table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; margin-bottom: 0.6rem; font-size: 0.85rem; }
-    .prose-custom th { background-color: #f1f5f9; color: #334155; font-weight: 700; text-align: left; padding: 5px 8px; border: 1px solid #cbd5e1; }
-    .prose-custom td { padding: 5px 8px; border: 1px solid #e2e8f0; line-height: 1.35; }
-    .prose-custom td:first-child { font-weight: 700; background-color: #f8fafc; width: 25%; }
-    .prose-custom blockquote { background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 6px 10px; margin: 6px 0; border-radius: 0 6px 6px 0; font-size: 0.85rem; color: #1e40af; }
+    /* Markdown Styling inside preview (Enhanced Executive Look) */
+    .prose-custom h1 { font-size: 1.5rem; font-weight: 800; color: #0f172a; border-bottom: 3px solid #1e3a8a; padding-bottom: 0.4rem; margin-top: 0.4rem; margin-bottom: 0.6rem; }
+    .prose-custom h2 { font-size: 1.1rem; font-weight: 700; color: #1e3a8a; background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 4px 8px; margin-top: 1rem; margin-bottom: 0.4rem; border-radius: 0 4px 4px 0; }
+    .prose-custom h3 { font-size: 0.95rem; font-weight: 700; color: #334155; margin-top: 0.8rem; margin-bottom: 0.3rem; }
+    .prose-custom ul { list-style-type: none; padding-left: 0; margin-top: 0.3rem; margin-bottom: 0.3rem; }
+    .prose-custom li { position: relative; padding-left: 1.1rem; margin-bottom: 0.25rem; line-height: 1.4; font-size: 0.86rem; }
+    .prose-custom table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; margin-bottom: 0.5rem; font-size: 0.83rem; }
+    .prose-custom th { background-color: #f1f5f9; color: #1e293b; font-weight: 700; text-align: left; padding: 5px 8px; border: 1px solid #cbd5e1; }
+    .prose-custom td { padding: 5px 8px; border: 1px solid #e2e8f0; line-height: 1.3; }
+    .prose-custom td:first-child { font-weight: 700; background-color: #f8fafc; width: 24%; color: #334155; }
+    .prose-custom blockquote { background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 6px 10px; margin: 6px 0; border-radius: 0 6px 6px 0; font-size: 0.85rem; color: #1e40af; font-weight: 600; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
@@ -92,16 +92,16 @@
           <p class="text-xs text-slate-400 hidden sm:block">상호명과 주소만으로 매장 정보 탐색부터 현장 접근 스크립트까지 자동 생성</p>
         </div>
       </div>
+      
       <!-- config.json 불러오기 버튼 및 상태 뱃지 -->
       <div class="flex items-center space-x-3">
         <label class="cursor-pointer flex items-center space-x-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-1.5 rounded-lg border border-slate-700 transition">
-			<i data-lucide="folder-open" class="w-3.5 h-3.5 text-amber-400"></i>
-			<span>📂 config.json 불러오기</span>
-			<input type="file" id="configFileInput" accept=".json,application/json" class="hidden" />
-		</label>
-        <span id="backendStatus" class="text-[11px] bg-amber-900/50 text-amber-300 px-2.5 py-1 rounded border border-amber-700/50">미설정</span>
+          <i data-lucide="folder-open" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>📂 config.json 불러오기</span>
+          <input type="file" id="configFileInput" accept=".json,application/json" class="hidden" />
+        </label>
+        <span id="backendStatus" class="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded border border-slate-700">확인 중...</span>
       </div>
-      
     </div>
   </header>
 
@@ -123,7 +123,7 @@
             <label for="businessName" class="block text-xs font-semibold text-slate-700 mb-1">
               상호명 <span class="text-red-500">*</span>
             </label>
-            <input type="text" id="businessName" required placeholder="예: 성심당, 스타벅스 강남점" 
+            <input type="text" id="businessName" required placeholder="예: 양산도집, 성심당, 스타벅스 강남점" 
               class="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
           </div>
 
@@ -132,10 +132,23 @@
             <label for="businessAddress" class="block text-xs font-semibold text-slate-700 mb-1">
               주소 또는 지역 <span class="text-red-500">*</span>
             </label>
-            <input type="text" id="businessAddress" required placeholder="예: 대전 중구 대종로480번길 15 또는 서울 마포구 연남동" 
+            <input type="text" id="businessAddress" required placeholder="예: 부산 사상구 낙동대로 799-34 또는 서울 마포구 연남동" 
               class="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
           </div>
-          
+
+          <!-- Quick Demo Preset Buttons -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">빠른 테스트 샘플 (Preset)</label>
+            <div class="flex gap-2">
+              <button type="button" onclick="loadPreset('yangsando')" class="flex-1 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded border border-slate-200 transition">
+                양산도집 (노포)
+              </button>
+              <button type="button" onclick="loadPreset('haeundae')" class="flex-1 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded border border-slate-200 transition">
+                해운대 카페 (신규)
+              </button>
+            </div>
+          </div>
+
           <!-- Submit Button -->
           <button type="submit" id="generateBtn" 
             class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2">
@@ -151,7 +164,7 @@
           <i data-lucide="bot" class="w-4 h-4 text-brand-600"></i> AI Agent 동작 원리
         </div>
         <p class="leading-relaxed">
-          입력된 상호명과 주소를 바탕으로 AI가 웹 데이터(위치, 메뉴, 리뷰, 디지털 친화도)를 추론·조합하여 <strong>소상공인 맞춤 5대 필수 항목</strong>으로 구성된 1-Paper 요약 리포트를 실시간 작성합니다.
+          입력된 상호명과 주소를 바탕으로 AI가 상권 및 매장 데이터를 정밀 추론하여, <strong>임팩트 있는 전문 1-Paper 프로필 리포트</strong>를 실시간 작성합니다.
         </p>
       </div>
     </section>
@@ -172,6 +185,11 @@
           <button onclick="copyMarkdown()" id="copyBtn" class="flex items-center space-x-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg border border-slate-300 transition" title="마크다운 복사">
             <i data-lucide="copy" class="w-3.5 h-3.5"></i>
             <span class="hidden sm:inline">복사</span>
+          </button>
+          
+          <button onclick="toggleEditMode()" id="editBtn" class="flex items-center space-x-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg border border-slate-300 transition" title="직접 내용 수정">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">수정</span>
           </button>
 
           <button onclick="triggerPrint()" class="flex items-center space-x-1 text-xs bg-brand-600 hover:bg-brand-700 text-white font-bold px-3.5 py-1.5 rounded-lg shadow transition">
@@ -194,7 +212,7 @@
           </div>
           <h3 class="text-sm font-bold text-slate-800 mb-2">영업 타겟 리포트 자동 생성 중...</h3>
           <div id="stepProgress" class="text-xs text-brand-600 font-medium h-6">
-            네이버 지도 & 플레이스 매장 데이터 탐색 중...
+            네이버 지도 & 스마트플레이스 매장 데이터 탐색 중...
           </div>
           <p class="text-[11px] text-slate-400 mt-2">약 3~5초 소요됩니다.</p>
         </div>
@@ -230,41 +248,6 @@
     </section>
   </main>
 
-  <!-- API Key Modal -->
-  <div id="apiKeyModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-          <i data-lucide="key" class="w-5 h-5 text-amber-500"></i> Gemini API Key 설정
-        </h3>
-        <button onclick="toggleApiKeyModal(false)" class="text-slate-400 hover:text-slate-600">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <p class="text-xs text-slate-600 leading-relaxed">
-        Google Gemini API Key를 입력하시면 본인의 API 사용량 한도로 안전하게 리포트를 생성합니다. 입력된 키는 브라우저(LocalStorage)에만 저장됩니다.
-      </p>
-
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">API Key</label>
-        <input type="password" id="userApiKeyInput" placeholder="AIzaSy..." 
-          class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500">
-      </div>
-
-      <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-[11px] text-slate-500 space-y-1">
-        <p class="font-bold text-slate-700">💡 무료 API 키 발급 방법:</p>
-        <p>1. <a href="https://aistudio.google.com/" target="_blank" class="text-brand-600 underline font-semibold">Google AI Studio</a>에 접속합니다.</p>
-        <p>2. "Get API key" 버튼을 클릭하여 무료 키를 생성합니다.</p>
-      </div>
-
-      <div class="flex justify-end space-x-2 pt-2">
-        <button onclick="toggleApiKeyModal(false)" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition">취소</button>
-        <button onclick="saveApiKey()" class="px-4 py-2 text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow transition">저장하기</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Notification Toast -->
   <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs px-4 py-3 rounded-lg shadow-xl flex items-center space-x-2 transition-opacity opacity-0 pointer-events-none z-50">
     <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
@@ -299,41 +282,20 @@
       showToast(`${p.name} 샘플 데이터 입력 완료!`);
     }
 
-    // Modal Control
-    function toggleApiKeyModal(show) {
-      const modal = document.getElementById('apiKeyModal');
-      if (show) modal.classList.remove('hidden');
-      else modal.classList.add('hidden');
-    }
-
-    document.getElementById('apiKeyModalBtn').addEventListener('click', () => {
-      const savedKey = localStorage.getItem('GEMINI_API_KEY') || localStorage.getItem('gemini_api_key') || '';
-      document.getElementById('userApiKeyInput').value = savedKey;
-      toggleApiKeyModal(true);
-    });
-
-    function saveApiKey() {
-      const key = document.getElementById('userApiKeyInput').value.trim();
-      localStorage.setItem('GEMINI_API_KEY', key);
-      localStorage.setItem('gemini_api_key', key);
-      toggleApiKeyModal(false);
-      showToast('API Key가 안전하게 저장되었습니다.');
-    }
-
     // --- config.json 파일 로드 및 API 키 상태 관리 ---
     function updateApiKeyStatus() {
-  const key = (localStorage.getItem('GEMINI_API_KEY') || localStorage.getItem('gemini_api_key') || '').trim();
-  const statusEl = document.getElementById('backendStatus');
-  if (!statusEl) return;
+      const key = (localStorage.getItem('GEMINI_API_KEY') || localStorage.getItem('gemini_api_key') || '').trim();
+      const statusEl = document.getElementById('backendStatus');
+      if (!statusEl) return;
 
-  if (key !== '') {
-    statusEl.textContent = 'API 키 설정됨';
-    statusEl.className = 'text-[11px] bg-emerald-900/50 text-emerald-300 px-2.5 py-1 rounded border border-emerald-700/50';
-  } else {
-    statusEl.textContent = '미설정';
-    statusEl.className = 'text-[11px] bg-amber-900/50 text-amber-300 px-2.5 py-1 rounded border border-amber-700/50';
-  }
-}
+      if (key !== '') {
+        statusEl.textContent = 'API 키 설정됨';
+        statusEl.className = 'text-[11px] bg-emerald-900/50 text-emerald-300 px-2.5 py-1 rounded border border-emerald-700/50';
+      } else {
+        statusEl.textContent = '미설정';
+        statusEl.className = 'text-[11px] bg-amber-900/50 text-amber-300 px-2.5 py-1 rounded border border-amber-700/50';
+      }
+    }
 
     document.getElementById('configFileInput')?.addEventListener('change', (e) => {
       const file = e.target.files && e.target.files[0];
@@ -364,7 +326,7 @@
 
     // 페이지 로드 시 API 키 상태 체크
     updateApiKeyStatus();
-	
+
     // Toast Notice
     function showToast(msg) {
       const toast = document.getElementById('toast');
@@ -471,51 +433,53 @@
 - 상호명: ${name}
 - 주소/지역: ${address}
 
-위 매장 정보를 바탕으로 실제 상권 특징과 매장 특성을 다각도로 추론·분석하여, 아래 명시된 [규격 마크다운 양식]에 완벽히 맞추어 1-Paper 영업 브리핑 리포트를 생성해라.
+위 매장 정보를 바탕으로 실제 상권 특징과 매장 특성을 다각도로 추론·분석하여, 첨부된 [양산도집 영업타겟 브리핑]과 같이 가독성과 시각적 강조가 극대화된 임팩트 있는 전문 1-Paper 영업 브리핑 리포트를 마크다운으로 생성해라.
 
 [출력 규칙]
-1. 반드시 아래 5개 필수 항목 및 세부 서식을 엄격히 준수할 것.
+1. 반드시 아래 지정된 6개 필수 항목 및 세부 서식을 엄격히 준수할 것.
 2. 마크다운 이외의 불필요한 설명 멘트(예: "네, 작성해 드리겠습니다")는 절대 포함하지 말 것.
 3. A4 한 페이지에 깔끔하게 프린트될 수 있도록 명확하고 간결하게 작성할 것.
 
 ---
 
-# ${name} | 영업 타겟 브리핑 리포트
-> **작성일자:** ${new Date().toISOString().slice(0, 10)} | **타겟 등급:** A등급
+# ${name}
+## 영업 타겟 브리핑 리포트 (Target Account Profile)
+> **타겟 등급:** 🌟 A등급 (우선 공략) | **작성일자:** ${new Date().toISOString().slice(0, 10)}
 
 ### 1. 매장 기본 정보
 - **상호명:** ${name}
-- **업종/분류:** (분석 기반 정확한 업종 명시)
+- **대표자명:** (분석 기반 추정 대표자명 또는 가업 승계/역사성 반영)
+- **업종/분류:** (정확한 업종 및 세부 분류 명시)
+- **연락처:** (대표번호 또는 안내번호 추론)
 - **주소/위치:** ${address}
-- **추정 연락처:** (매장 대표번호 또는 안내번호 추론)
-- **영업시간:** (상권 특성에 맞게 추론)
+- **영업시간:** (상권 특성에 맞는 영업시간 및 브레이크타임 추론)
 
-### 2. 매장 특성 및 운영 현황 (웹 수집/분석 데이터)
-| 구분 | 현황 및 특성 분석 |
+### 2. 매장 특성 및 운영 현황 (웹 수집/분석)
+| 구분 | 현황 및 특성 분석 내용 |
 | :--- | :--- |
-| **매장 규모 및 입지** | (상권 및 주소 기반 입지 특성) |
-| **주요 고객층** | (연령대, 타겟 고객군 분석) |
-| **디지털 활용도** | (스마트플레이스, SNS, 포스/테이블오더 활용 현황 추론) |
-| **주요 상품/메뉴** | (대표 메뉴 또는 주력 서비스) |
+| **매장 규모** | (건물 형태, 룸/단체석 보유 여부, 주차장 등) |
+| **주요 고객층** | (연령대, 타겟 고객군, 단골 및 모임 수요 분석) |
+| **디지털 활용** | (네이버 스마트플레이스, 예약/결제 수단, 자동화 솔루션 도입 현황) |
+| **주요 메뉴** | (대표 메뉴 및 주력 상품/서비스 특성) |
 
 ### 3. 주요 예상 페인포인트 (Pain Points)
-- ⚠️ **[페인포인트 1]:** (매장 운영상 구체적 피크타임 병목, 인력난, 고객응대 문제 등)
-- ⚠️ **[페인포인트 2]:** (디지털 마케팅, 재방문 유치, 마진율/결제 효율 문제 등)
-- ⚠️ **[페인포인트 3]:** (통신, CCTV, POS 등 매장 자동화 시설 관련 페인포인트)
+- ⚠️ **[예약 및 응대 병목]:** (피크타임 전화 문의 폭주 및 수기 예약/응대 지연 문제)
+- ⚠️ **[고객 데이터 관리]:** (단골 고객 방문 이력 및 마케팅/이벤트 발송 시스템 부재)
+- ⚠️ **[현장 대기 관리]:** (대기 시간 증가에 따른 고객 이탈 방지 및 웨이팅 관리의 한계)
 
-### 4. 맞춤형 셀링 포인트 (Selling Point)
-- 🎯 **[셀링포인트 1]:** (페인포인트 1을 해결하는 B2B 솔루션 제안)
-- 🎯 **[셀링포인트 2]:** (비용 절감 또는 매출 증대 직결 솔루션 제안)
+### 4. 맞춤형 셀링 포인트 (Selling Points)
+- 🎯 **[알림톡 기반 스마트 예약]:** (어르신 손님도 쉽게 사용 가능한 카톡 연동 예약으로 카운터 응대 부담 대폭 절감)
+- 🎯 **[고단가 고객 CRM 및 시즌 마케팅]:** (재방문 주기 맞춤 알림문자 발송으로 고단가 재방문 매출 증대)
 
-### 5. 접근 스크립트 및 키 메시지 (Approach Strategy)
-- **아이스 브레이킹:** (사장님 친밀도 형성용 첫 인사)
-- **핵심 질문 (Opening Question):** (현재 매장 운영 방식의 불편함을 자극하는 핵심 질문)
-- **제안 멘트:** (부담 없이 상담/시연으로 유도하는 30초 영업 멘트)
+### 5. 현장 접근 스크립트 (Approach Strategy)
+- **[아이스 브레이킹]:** (매장 역사나 지역 특성을 반영한 친근한 첫 인사 멘트)
+- **[핵심 질문]:** (피크타임 전화 예약 및 대기 관리 시 겪는 불편함을 짚어내는 질문)
+- **[제안 멘트]:** (부담 없이 스마트 예약/대기 시스템 도입으로 유도하는 30초 영업 멘트)
 
-### 📝 현장 방문 & 미팅 기록 (Memo)
-- [${new Date().toISOString().slice(0, 10)}]: (추천 방문 시간대 및 사장님 접견 팁)
+### 6. 현장 방문 및 미팅 메모
+- [${new Date().toISOString().slice(0, 10)} 작성]: 매장 사전 분석 완료. 피크타임 직전 브레이크 타임 시간대 방문 미팅 추진 권장.
 `;
-        
+
 		const GEMINI_MODELS = [
 			"gemini-2.5-flash-lite",
 			"gemini-2.5-flash",
@@ -530,7 +494,7 @@
         const apiKey = localStorage.getItem('GEMINI_API_KEY') || localStorage.getItem('gemini_api_key') || "";
 
         if (!apiKey) {
-          throw new Error("API 키가 설정되지 않았습니다. 우측 상단의 [API Key 설정] 버튼을 눌러 키를 입력해 주세요.");
+          throw new Error("API 키가 설정되지 않았습니다. 상단의 [📂 config.json 불러오기] 버튼을 눌러 키를 적재해 주세요.");
         }
 
         let lastMsg = "알 수 없는 오류";
