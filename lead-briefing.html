@@ -521,8 +521,20 @@ Include: 매장 규모, 주 고객층, 디지털 활용도, 주요 상품/메뉴
 위 정보를 바탕으로 해당 매장에 가장 최적화된 1-Paper 영업 브리핑 리포트를 마크다운으로 생성해줘.
 `;
 
+
+const GEMINI_MODELS = [
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash-lite",
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+    "gemini-3.8-flash",
+    "gemini-flash-lite"
+];
+  
       const apiKey = localStorage.getItem('gemini_api_key') || "";
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+	  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(apiKey);
 
       try {
         const response = await fetch(apiUrl, {
