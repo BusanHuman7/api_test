@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>소상공인 영업 타겟 1-Paper 브리핑 생성 에이전트</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Marked.js for Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+
+    /* Print styling for clean A4 1-Page Export */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printArea, #printArea * {
+        visibility: visible;
+      }
+      #printArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page-break-avoid {
+        page-break-inside: avoid;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 12mm 15mm;
+      }
+    }
+
+    /* Markdown Styling inside preview */
+    .prose-custom h1 { font-size: 1.5rem; font-weight: 800; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 0.5rem; margin-top: 1rem; margin-bottom: 1rem; }
+    .prose-custom h2 { font-size: 1.15rem; font-weight: 700; color: #1e293b; border-left: 4px solid #2563eb; padding-left: 0.5rem; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+    .prose-custom h3 { font-size: 1rem; font-weight: 700; color: #334155; margin-top: 1rem; margin-bottom: 0.5rem; }
+    .prose-custom ul { list-style-type: none; padding-left: 0; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    .prose-custom li { position: relative; padding-left: 1.25rem; margin-bottom: 0.35rem; line-height: 1.5; font-size: 0.9rem; }
+    .prose-custom table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; margin-bottom: 0.75rem; font-size: 0.875rem; }
+    .prose-custom th { background-color: #f1f5f9; color: #334155; font-weight: 700; text-align: left; padding: 6px 10px; border: 1px solid #cbd5e1; }
+    .prose-custom td { padding: 6px 10px; border: 1px solid #e2e8f0; line-height: 1.4; }
+    .prose-custom td:first-child { font-weight: 700; background-color: #f8fafc; width: 25%; }
+    .prose-custom blockquote { background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 8px 12px; margin: 8px 0; border-radius: 0 6px 6px 0; font-size: 0.875rem; color: #1e40af; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+
+  <!-- Navigation / Header -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="bg-brand-600 p-2 rounded-lg text-white">
+          <i data-lucide="file-text" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight leading-tight">소상공인 영업 타겟 1-Paper 브리핑 에이전트</h1>
+          <p class="text-xs text-slate-400 hidden sm:block">상호명과 주소만으로 매장 정보 탐색부터 현장 접근 스크립트까지 자동 생성</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-3">
+        <button id="apiKeyModalBtn" class="flex items-center space-x-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+          <i data-lucide="key" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>API Key 설정</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Input Form & Controls (4 Cols) -->
+    <section class="lg:col-span-5 space-y-5 no-print">
+
+      <!-- Main Input Form -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <i data-lucide="search" class="w-4 h-4 text-brand-600"></i> 타겟 매장 정보 입력
+        </h2>
+        
+        <form id="briefingForm" onsubmit="generateBriefing(event)" class="space-y-4">
+          <!-- Business Name -->
+          <div>
+            <label for="businessName" class="block text-xs font-semibold text-slate-700 mb-1">
+              상호명 <span class="text-red-500">*</span>
+            </label>
+            <input type="text" id="businessName" required placeholder="예: 성심당, 스타벅스 강남점" 
+              class="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+          </div>
+
+          <!-- Address / Region -->
+          <div>
+            <label for="businessAddress" class="block text-xs font-semibold text-slate-700 mb-1">
+              주소 또는 지역 <span class="text-red-500">*</span>
+            </label>
+            <input type="text" id="businessAddress" required placeholder="예: 대전 중구 대종로480번길 15 또는 서울 마포구 연남동" 
+              class="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+          </div>
+
+          <!-- Target Selling Item -->
+          <div>
+            <label for="sellingItem" class="block text-xs font-semibold text-slate-700 mb-1">
+              제안할 영업 아이템 / 솔루션
+            </label>
+            <select id="sellingItem" class="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white">
+              <option value="테이블오더 및 선결제 포스 솔루션">테이블오더 / 스마트 포스 솔루션</option>
+              <option value="모바일 예약 및 웨이팅 솔루션">모바일 예약 / 웨이팅 솔루션</option>
+              <option value="네이버 스마트플레이스 & 바이럴 마케팅">네이버 플레이스 & 바이럴 마케팅</option>
+              <option value="종합 B2B 솔루션 (맞춤 제안)">종합 B2B 솔루션 (맞춤 제안)</option>
+            </select>
+          </div>
+
+          <!-- Additional Notes -->
+          <div>
+            <label for="extraContext" class="block text-xs font-semibold text-slate-700 mb-1">
+              추가 참고사항 (선택)
+            </label>
+            <textarea id="extraContext" rows="2" placeholder="예: 3대째 가업 승계 매장임, 최근 인스타그램 마케팅을 시작함 등 특이사항" 
+              class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"></textarea>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" id="generateBtn" 
+            class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>1-Paper 브리핑 리포트 생성</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Agent Capabilities / Info Box -->
+      <div class="bg-slate-100 rounded-xl p-4 border border-slate-200 text-xs text-slate-600 space-y-2">
+        <div class="font-bold text-slate-800 flex items-center gap-1.5">
+          <i data-lucide="bot" class="w-4 h-4 text-brand-600"></i> AI Agent 동작 원리
+        </div>
+        <p class="leading-relaxed">
+          입력된 상호명과 주소를 바탕으로 AI가 웹 데이터(위치, 메뉴, 리뷰, 디지털 친화도)를 추론·조합하여 <strong>소상공인 맞춤 5대 필수 항목</strong>으로 구성된 1-Paper 요약 리포트를 실시간 작성합니다.
+        </p>
+      </div>
+    </section>
+
+    <!-- Right Column: Output & Preview (7 Cols) -->
+    <section class="lg:col-span-7 flex flex-col space-y-4">
+      
+      <!-- Toolbar Header -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 flex flex-wrap items-center justify-between gap-3 no-print">
+        <div class="flex items-center space-x-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-xs font-bold text-slate-700">리포트 미리보기</span>
+          <span id="statusBadge" class="text-[11px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200">대기 중</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center space-x-2">
+          <button onclick="copyMarkdown()" id="copyBtn" class="flex items-center space-x-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg border border-slate-300 transition" title="마크다운 복사">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">복사</span>
+          </button>
+          
+          <button onclick="toggleEditMode()" id="editBtn" class="flex items-center space-x-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg border border-slate-300 transition" title="직접 내용 수정">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">수정</span>
+          </button>
+
+          <button onclick="triggerPrint()" class="flex items-center space-x-1 text-xs bg-brand-600 hover:bg-brand-700 text-white font-bold px-3.5 py-1.5 rounded-lg shadow transition">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span>PDF 저장 / 인쇄</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Document Render Box -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 p-6 md:p-8 relative min-h-[600px] flex flex-col">
+        
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="hidden absolute inset-0 bg-white/95 backdrop-blur-sm z-20 rounded-xl flex flex-col items-center justify-center p-6 text-center">
+          <div class="relative mb-4">
+            <div class="w-12 h-12 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <i data-lucide="sparkles" class="w-5 h-5 text-brand-600"></i>
+            </div>
+          </div>
+          <h3 class="text-sm font-bold text-slate-800 mb-2">영업 타겟 리포트 자동 생성 중...</h3>
+          <div id="stepProgress" class="text-xs text-brand-600 font-medium h-6">
+            네이버 지도 & 플레이스 매장 데이터 탐색 중...
+          </div>
+          <p class="text-[11px] text-slate-400 mt-2">약 3~5초 소요됩니다.</p>
+        </div>
+
+        <!-- Empty Placeholder State -->
+        <div id="emptyState" class="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400 my-auto">
+          <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+            <i data-lucide="file-search" class="w-8 h-8 text-slate-300"></i>
+          </div>
+          <h3 class="text-sm font-bold text-slate-600 mb-1">작성된 브리핑지 없음</h3>
+          <p class="text-xs text-slate-400 max-w-xs mb-4">
+            좌측 양식에 상호명과 주소를 입력하여 1-Paper 브리핑지를 생성해보세요.
+          </p>
+        </div>
+
+        <!-- Rendered Report Document Container (Print Target) -->
+        <div id="printArea" class="hidden flex-1 flex flex-col justify-between">
+          <div id="reportContent" class="prose-custom text-slate-800">
+            <!-- Dynamic Content Will Be Rendered Here -->
+          </div>
+          
+          <!-- Document Footer for Print -->
+          <div class="mt-8 pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-400">
+            <span>소상공인 영업 타겟 1-Paper 브리핑 리포트</span>
+            <span>Generated by AI Sales Agent</span>
+          </div>
+        </div>
+
+        <!-- Editable Raw Markdown Textarea (Hidden by Default) -->
+        <textarea id="markdownEditor" class="hidden w-full h-[550px] p-4 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="마크다운 내용을 직접 수정할 수 있습니다."></textarea>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- API Key Modal -->
+  <div id="apiKeyModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <i data-lucide="key" class="w-5 h-5 text-amber-500"></i> Gemini API Key 설정
+        </h3>
+        <button onclick="toggleApiKeyModal(false)" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Google Gemini API Key를 입력하시면 본인의 API 사용량 한도로 안전하게 리포트를 생성합니다. 입력된 키는 브라우저(LocalStorage)에만 저장됩니다.
+      </p>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">API Key</label>
+        <input type="password" id="userApiKeyInput" placeholder="AIzaSy..." 
+          class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500">
+      </div>
+
+      <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-[11px] text-slate-500 space-y-1">
+        <p class="font-bold text-slate-700">💡 무료 API 키 발급 방법:</p>
+        <p>1. <a href="https://aistudio.google.com/" target="_blank" class="text-brand-600 underline font-semibold">Google AI Studio</a>에 접속합니다.</p>
+        <p>2. "Get API key" 버튼을 클릭하여 무료 키를 생성합니다.</p>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="toggleApiKeyModal(false)" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition">취소</button>
+        <button onclick="saveApiKey()" class="px-4 py-2 text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow transition">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs px-4 py-3 rounded-lg shadow-xl flex items-center space-x-2 transition-opacity opacity-0 pointer-events-none z-50">
+    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toastMsg">메시지 내용</span>
+  </div>
+
+  <script>
+    // Initialize Icons
+    lucide.createIcons();
+
+    // App State
+    let currentMarkdown = '';
+    let isEditing = false;
+
+    // Presets
+    const presets = {
+      yangsando: {
+        name: "양산도집",
+        address: "부산 사상구 낙동대로 799-34",
+        item: "모바일 예약 및 웨이팅 솔루션",
+        extra: "1956년 개업 3대 가업 승계 민물장어 백년가게 노포 매장"
+      },
+      haeundae: {
+        name: "해운대 아뜰리에 샌드위치 & 카페",
+        address: "부산 해운대구 우동 해리단길 인근",
+        item: "테이블오더 및 선결제 포스 솔루션",
+        extra: "신규 개업 수제 샌드위치 매장, 주말 점심 인력 부족으로 응대 지연됨"
+      }
+    };
+
+    function loadPreset(key) {
+      const p = presets[key];
+      if (!p) return;
+      document.getElementById('businessName').value = p.name;
+      document.getElementById('businessAddress').value = p.address;
+      document.getElementById('sellingItem').value = p.item;
+      document.getElementById('extraContext').value = p.extra;
+      showToast(`${p.name} 샘플 데이터 입력 완료!`);
+    }
+
+    // Modal Control
+    function toggleApiKeyModal(show) {
+      const modal = document.getElementById('apiKeyModal');
+      if (show) modal.classList.remove('hidden');
+      else modal.classList.add('hidden');
+    }
+
+    document.getElementById('apiKeyModalBtn').addEventListener('click', () => {
+      const savedKey = localStorage.getItem('gemini_api_key') || '';
+      document.getElementById('userApiKeyInput').value = savedKey;
+      toggleApiKeyModal(true);
+    });
+
+    function saveApiKey() {
+      const key = document.getElementById('userApiKeyInput').value.trim();
+      localStorage.setItem('gemini_api_key', key);
+      toggleApiKeyModal(false);
+      showToast('API Key가 안전하게 저장되었습니다.');
+    }
+
+    // Toast Notice
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 3000);
+    }
+
+    // Toggle Markdown Editor
+    function toggleEditMode() {
+      const reportContent = document.getElementById('reportContent');
+      const markdownEditor = document.getElementById('markdownEditor');
+      const editBtn = document.getElementById('editBtn');
+
+      if (!currentMarkdown) {
+        showToast('수정할 리포트 내용이 없습니다.');
+        return;
+      }
+
+      isEditing = !isEditing;
+
+      if (isEditing) {
+        markdownEditor.value = currentMarkdown;
+        reportContent.classList.add('hidden');
+        markdownEditor.classList.remove('hidden');
+        editBtn.classList.add('bg-amber-100', 'text-amber-800', 'border-amber-300');
+        editBtn.querySelector('span').innerText = '완료';
+      } else {
+        currentMarkdown = markdownEditor.value;
+        reportContent.innerHTML = marked.parse(currentMarkdown);
+        markdownEditor.classList.add('hidden');
+        reportContent.classList.remove('hidden');
+        editBtn.classList.remove('bg-amber-100', 'text-amber-800', 'border-amber-300');
+        editBtn.querySelector('span').innerText = '수정';
+        showToast('리포트 수정 내용이 반영되었습니다.');
+      }
+    }
+
+    // Copy Markdown
+    function copyMarkdown() {
+      if (!currentMarkdown) {
+        showToast('복사할 내용이 없습니다.');
+        return;
+      }
+      navigator.clipboard.writeText(currentMarkdown).then(() => {
+        showToast('마크다운 텍스트가 클립보드에 복사되었습니다!');
+      }).catch(() => {
+        showToast('복사 실패');
+      });
+    }
+
+    // Print Handler
+    function triggerPrint() {
+      if (!currentMarkdown) {
+        showToast('인쇄할 리포트가 없습니다.');
+        return;
+      }
+      if (isEditing) toggleEditMode(); // Exit edit mode before print
+      window.print();
+    }
+
+    // Generate Briefing via Gemini API
+    async function generateBriefing(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('businessName').value.trim();
+      const address = document.getElementById('businessAddress').value.trim();
+      const item = document.getElementById('sellingItem').value;
+      const extra = document.getElementById('extraContext').value.trim();
+
+      if (!name || !address) {
+        showToast('상호명과 주소를 입력해주세요.');
+        return;
+      }
+
+      // Show Loading UI
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      const stepProgress = document.getElementById('stepProgress');
+      const emptyState = document.getElementById('emptyState');
+      const printArea = document.getElementById('printArea');
+      const statusBadge = document.getElementById('statusBadge');
+
+      loadingOverlay.classList.remove('hidden');
+      statusBadge.innerText = 'AI 생성 중...';
+      statusBadge.className = 'text-[11px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded border border-amber-200 font-bold';
+
+      const steps = [
+        "네이버 지도 & 스마트플레이스 매장 데이터 탐색 중...",
+        "고객 리뷰 패턴 & 디지털 활용도 분석 중...",
+        "운영 특성 기반 페인포인트 및 셀링 포인트 도출 중...",
+        "현장 접근 스크립트 및 1-Paper 브리핑지 작성 중..."
+      ];
+
+      let stepIdx = 0;
+      const stepInterval = setInterval(() => {
+        stepIdx = (stepIdx + 1) % steps.length;
+        stepProgress.innerText = steps[stepIdx];
+      }, 1200);
+
+      try {
+        const promptText = `
+[역할]
+너는 B2B 소상공인 영업 타겟 분석가야.
+영업 타겟 대상 정보:
+- 상호명: ${name}
+- 주소/지역: ${address}
+- 제안 영업 아이템/솔루션: ${item}
+- 추가 참고사항: ${extra || '없음'}
+
+위 정보를 바탕으로 해당 매장에 가장 최적화된 1-Paper 영업 브리핑 리포트를 마크다운으로 생성해줘.
+`;
+
+        const GEMINI_MODELS = [
+          "gemini-1.5-flash",
+          "gemini-1.5-pro",
+          "gemini-2.0-flash"
+        ];
+
+        // 수정된 안전한 API Key 로드 부분
+        const apiKey = localStorage.getItem('gemini_api_key') || "";
+
+        if (!apiKey) {
+          throw new Error("API 키가 설정되지 않았습니다. 우측 상단의 [API Key 설정] 버튼을 눌러 키를 입력해 주세요.");
+        }
+
+        let lastMsg = "알 수 없는 오류";
+        let generatedText = "";
+
+        for (const model of GEMINI_MODELS) {
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=` + encodeURIComponent(apiKey);
+
+          for (let a = 0; a < 3; a++) {
+            try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+              const res = await fetch(apiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }),
+                signal: controller.signal
+              });
+              clearTimeout(timeoutId);
+
+              if (res.status === 503 || res.status === 429) {
+                lastMsg = `Gemini 과부하(${res.status})`;
+                await new Promise(r => setTimeout(r, 1500 * Math.pow(2, a)));
+                continue;
+              }
+
+              const text = await res.text();
+              let json = null;
+              try {
+                json = JSON.parse(text);
+              } catch (e) {
+                lastMsg = "Gemini 응답 파싱 실패";
+                break;
+              }
+
+              if (!res.ok) {
+                lastMsg = `Gemini API 오류(${res.status}): ` + ((json && json.error && json.error.message) || text.slice(0, 120));
+                break;
+              }
+
+              const out = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+              const trimmed = (out || "").trim();
+
+              if (!trimmed) {
+                lastMsg = "Gemini 빈 응답";
+                await new Promise(r => setTimeout(r, 1500));
+                continue;
+              }
+
+              generatedText = trimmed;
+              break;
+
+            } catch (e) {
+              lastMsg = e.message;
+              await new Promise(r => setTimeout(r, 1500 * (a + 1)));
+            }
+          }
+          if (generatedText) break;
+        }
+
+        if (!generatedText) {
+          throw new Error(`모든 Gemini 모델 호출 실패: ${lastMsg}`);
+        }
+
+        currentMarkdown = generatedText;
+        
+        // Render Markdown to UI
+        document.getElementById('reportContent').innerHTML = marked.parse(currentMarkdown);
+
+        emptyState.classList.add('hidden');
+        printArea.classList.remove('hidden');
+        
+        statusBadge.innerText = '작성 완료';
+        statusBadge.className = 'text-[11px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300 font-bold';
+
+        showToast('1-Paper 브리핑지가 성공적으로 생성되었습니다!');
+
+      } catch (err) {
+        clearInterval(stepInterval);
+        console.error(err);
+        showToast('생성 실패: ' + err.message);
+        statusBadge.innerText = '오류 발생';
+        statusBadge.className = 'text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded border border-red-200 font-bold';
+      } finally {
+        clearInterval(stepInterval);
+        loadingOverlay.classList.add('hidden');
+      }
+    }
+  </script>
+</body>
+</html>
