@@ -512,41 +512,75 @@ const GEMINI_MODELS = [
 
 	  const apiKey = localStorage.getItem('gemini_api_key') || "";
          
-	  for (const model of GEMINI_MODELS) {  
-	  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(apiKey);
-	  for (let a = 0; a < 3; a++) {
-      try {
-        const res = await fetchWithTimeout(url, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        }, timeoutMs);
-        if (res.status === 503 || res.status === 429) {
-          lastMsg = "Gemini 과부하(" + res.status + ")"; lastRetryable = true;
-          await sleep(1500 * Math.pow(2, a) + 300);
-          continue;
-        }
-        const text = await res.text();
-        let json = null;
-        try { json = JSON.parse(text); } catch (e) { lastMsg = "Gemini 응답 파싱 실패"; lastRetryable = false; break; }
-        if (!res.ok) {
-          lastMsg = "Gemini API 오류(" + res.status + "): " + ((json && json.error && json.error.message) || text.slice(0, 120));
-          lastRetryable = false;
-          break;
-        }
-        const out = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-        const trimmed = (out || "").trim();
-        if (!trimmed) { lastMsg = "Gemini 빈 응답"; lastRetryable = true; await sleep(1500); continue; }
-        return { status: "success", script: trimmed, report: trimmed, model: model };
-      } catch (e) {
-        lastMsg = e.message; lastRetryable = /503|429|overloaded|timeout|abort|network|fetch/i.test(lastMsg);
-        if (!lastRetryable) break;
-        await sleep(1500 * (a + 1));
-      }
-    }
+	  if (!apiKey) {
+  throw new Error("API 키가 설정되지 않았습니다. API 키를 입력해 주세요.");
+}
 
-        if (!response.ok) {
-          throw new Error(`API 호출 실패: status ${response.status}`);
-        }
+let lastMsg = "";
+let lastRetryable = false;
+
+for (const model of GEMINI_MODELS) {
+  // ✅ apiUrl 선언
+  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(apiKey);
+
+  for (let a = 0; a < 3; a++) {
+    try {
+      // ✅ apiUrl 변수명 일치 적용
+      const res = await fetchWithTimeout(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      }, timeoutMs);
+
+      // 과부하 또는 Rate Limit 시 재시도
+      if (res.status === 503 || res.status === 429) {
+        lastMsg = `Gemini 과부하(${res.status})`;
+        lastRetryable = true;
+        await sleep(1500 * Math.pow(2, a) + 300);
+        continue;
+      }
+
+      const text = await res.text();
+      let json = null;
+      try {
+        json = JSON.parse(text);
+      } catch (e) {
+        lastMsg = "Gemini 응답 파싱 실패";
+        lastRetryable = false;
+        break;
+      }
+
+      // 404 등 기타 오류 발생 시 다음 모델로 넘어가도록 처리
+      if (!res.ok) {
+        lastMsg = `Gemini API 오류(${res.status}): ` + ((json && json.error && json.error.message) || text.slice(0, 120));
+        lastRetryable = false;
+        break; // 현재 모델 실패 후 다음 GEMINI_MODELS로 이동
+      }
+
+      const out = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const trimmed = (out || "").trim();
+
+      if (!trimmed) {
+        lastMsg = "Gemini 빈 응답";
+        lastRetryable = true;
+        await sleep(1500);
+        continue;
+      }
+
+      // 성공 시 결과 반환
+      return { status: "success", script: trimmed, report: trimmed, model: model };
+
+    } catch (e) {
+      lastMsg = e.message;
+      lastRetryable = /503|429|overloaded|timeout|abort|network|fetch/i.test(lastMsg);
+      if (!lastRetryable) break;
+      await sleep(1500 * (a + 1));
+    }
+  }
+}
+
+// 모든 모델 호출 실패 시 예외 던지기
+throw new Error(`모든 Gemini 모델 호출 실패: ${lastMsg}`);
 
         const data = await response.json();
         const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
