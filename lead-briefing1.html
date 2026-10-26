@@ -462,13 +462,17 @@
 
 위 정보를 바탕으로 해당 매장에 가장 최적화된 1-Paper 영업 브리핑 리포트를 마크다운으로 생성해줘.
 `;
-
-        const GEMINI_MODELS = [
-          "gemini-1.5-flash",
-          "gemini-1.5-pro",
-          "gemini-2.0-flash"
-        ];
-
+        
+		const GEMINI_MODELS = [
+			"gemini-2.5-flash-lite",
+			"gemini-2.5-flash",
+			"gemini-3.1-flash-lite",
+			"gemini-3.5-flash-lite",
+			"gemini-3.6-flash",
+			"gemini-3.7-flash",
+			"gemini-3.8-flash",
+			"gemini-flash-lite"
+		];
         
 		// 양쪽 대소문자 키를 모두 확인하도록 수정된 코드 예시
 		const apiKey = localStorage.getItem('GEMINI_API_KEY') || localStorage.getItem('gemini_api_key') || "";
